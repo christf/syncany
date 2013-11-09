@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry excluding="main/resources/" kind="src" path="src"/>
+	<classpathentry excluding="main/resources/|main/" kind="src" path="src"/>
 	<classpathentry kind="src" path="tests"/>
 	<classpathentry kind="src" path="src/main/resources"/>
 	<classpathentry kind="con" path="org.apache.ivyde.eclipse.cpcontainer.IVYDE_CONTAINER/?project=SyncanyCore&amp;ivyXmlPath=ivy.xml&amp;confs=*"/>
