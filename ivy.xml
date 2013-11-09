@@ -27,6 +27,10 @@
 		<dependency org="junit" name="junit" rev="4.5" conf="cc-impl->default"/>		
 		<!--<dependency org="org.bouncycastle" name="bcprov-jdk16" rev="1.46"/>-->
 		<dependency org="org.bouncycastle" name="bcprov-jdk15on" rev="1.49"/>
+        
+        <dependency org="hsqldb" name="hsqldb" rev="1.8.0.10"/>
+        <dependency org="org.hibernate" name="hibernate-core" rev="4.2.7.Final"/>
+        <dependency org="org.hibernate" name="hibernate-annotations" rev="3.5.6-Final"/>
             
 		<dependency org="org.simpleframework" name="simple-xml" rev="2.7.1"/>
                         	
