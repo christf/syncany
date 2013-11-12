@@ -4,18 +4,28 @@ import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 
 public class HibernateUtil {
-	   private static final SessionFactory sessionFactory;
-	   static {
-	      try {
-	    	  Configuration config = new Configuration();
-	    	  sessionFactory = config.configure().buildSessionFactory();
-		   } catch (Throwable ex) {
-		   System.err.println("Initial SessionFactory creation failed." + ex);
-		   throw new ExceptionInInitializerError(ex);
-	      }
-	   }
-
-	   public static SessionFactory getSessionFactory() {
-	      return sessionFactory;
-	   }
+	private static SessionFactory sessionFactory;
+	private static Configuration config;
+	
+	static {
+		try {
+			config = new Configuration();
+		} catch (Throwable ex) {
+			System.err.println("Initial SessionFactory creation failed." + ex);
+			throw new ExceptionInInitializerError(ex);
+		}
 	}
+
+	public static SessionFactory getSessionFactory() {
+		if(sessionFactory == null || sessionFactory.isClosed()) {
+			sessionFactory = config.configure().buildSessionFactory();
+		}
+		return sessionFactory;
+	}
+
+	@Override
+	protected void finalize() throws Throwable {
+		super.finalize();
+		sessionFactory.close();
+	}
+}

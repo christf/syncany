@@ -8,16 +8,16 @@
     <session-factory>
 
      <property name="connection.driver_class">org.hsqldb.jdbcDriver</property>
-     <property name="connection.url">jdbc:hsqldb:file:testdb</property>
+     <property name="connection.url">jdbc:hsqldb:file:testdb;shutdown=true;write_delay=false; </property>
      <property name="connection.username">sa</property>
      <property name="connection.password"></property>
-              
-     <property name="connection.pool_size">1</property>
+     <property name="hibernate.connection.writedelay">false</property>
+     <property name="hibernate.connection.shutdown">true</property>
+	 <property name="dialect">org.hibernate.dialect.HSQLDialect</property>
+
      <property name="show_sql">true</property><property name="format_sql">true</property>
-     <property name="cache.provider_class">org.hibernate.cache.NoCacheProvider</property>
-     <property name="current_session_context_class">thread</property>
      
-     <property name="hbm2ddl.auto">create</property>
+     <property name="hbm2ddl.auto">update</property>
      
      <mapping class="org.syncany.database.SimpleEntity"/>
 
