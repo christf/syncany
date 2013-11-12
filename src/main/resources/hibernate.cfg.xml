@@ -20,6 +20,7 @@
      <property name="hbm2ddl.auto">update</property>
      
      <mapping class="org.syncany.database.SimpleEntity"/>
-
+	 <mapping class="org.syncany.database.DatabaseVersionEntity"/>
+	
     </session-factory>
 </hibernate-configuration>
