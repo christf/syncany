@@ -3,6 +3,7 @@ package org.syncany.database;
 import java.io.Serializable;
 
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.Id;
 
 import org.hibernate.annotations.DynamicUpdate;
@@ -10,6 +11,7 @@ import org.hibernate.annotations.Table;
 
 @DynamicUpdate
 @Table(appliesTo = "CHUNK")
+@Entity
 public class ChunkEntity implements Serializable{
 
 	private static final long serialVersionUID = 1L;

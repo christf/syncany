@@ -9,8 +9,6 @@ public class HibernateUtil {
 	      try {
 	    	  Configuration config = new Configuration();
 	    	  sessionFactory = config.configure().buildSessionFactory();
-
-		   
 		   } catch (Throwable ex) {
 		   System.err.println("Initial SessionFactory creation failed." + ex);
 		   throw new ExceptionInInitializerError(ex);

@@ -6,23 +6,20 @@
    
 <hibernate-configuration>
     <session-factory>
-        <!-- Database connection settings -->
-        <property name="connection.driver_class">org.hsqldb.jdbcDriver</property>
-        <property name="connection.url">jdbc:hsqldb:file:testdb</property>
-        <property name="connection.username">sa</property>
-        <property name="connection.password"></property>
-          
-     <!-- JDBC connection pool (use the built-in) -->
-     
+
+     <property name="connection.driver_class">org.hsqldb.jdbcDriver</property>
+     <property name="connection.url">jdbc:hsqldb:file:testdb</property>
+     <property name="connection.username">sa</property>
+     <property name="connection.password"></property>
+              
      <property name="connection.pool_size">1</property>
      <property name="show_sql">true</property><property name="format_sql">true</property>
      <property name="cache.provider_class">org.hibernate.cache.NoCacheProvider</property>
+     <property name="current_session_context_class">thread</property>
      
-     <!--create the database schema on startup if required -->
-     <property name="hbm2ddl.auto">update</property>
-     <mapping package="org.syncany.database"/>
-     <mapping class="org.syncany.database.ChunkEntity"/>
-          
-           
+     <property name="hbm2ddl.auto">create</property>
+     
+     <mapping class="org.syncany.database.SimpleEntity"/>
+
     </session-factory>
 </hibernate-configuration>
