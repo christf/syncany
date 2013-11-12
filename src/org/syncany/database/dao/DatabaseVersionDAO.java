@@ -6,7 +6,6 @@ import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.syncany.database.DatabaseVersionEntity;
 import org.syncany.database.DatabaseVersionHeaderEntity;
-import org.syncany.database.SimpleEntity;
 import org.syncany.database.util.HibernateUtil;
 
 public class DatabaseVersionDAO extends DAO{

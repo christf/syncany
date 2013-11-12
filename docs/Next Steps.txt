@@ -19,7 +19,12 @@ GUI Daemon version
 	
 	
 	
-	
+Database: 
+	- Create fix database scheme (currently, Hibernate is updating/creating scheme) 
+	- Enable create-dump mode for testing
+	- Entity to Business Model Mapper (Reflection vs. manual)
+	- DatabaseVersionHeader must be persisted normalized for elaborated queries (Date -> DBV older than x)
+	- Move Entities, DAOs to logical persistence layer/folder
 	
 	
 	
