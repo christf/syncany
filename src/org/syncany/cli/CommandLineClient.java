@@ -1,3 +1,20 @@
+/*
+ * Syncany, www.syncany.org
+ * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.syncany.cli;
 
 import static java.util.Arrays.asList;
@@ -214,7 +231,7 @@ public class CommandLineClient extends Client {
 				throw new Exception("Repo file is encrypted, but master key not set in config file.");
 			}
 			
-			String repoFileStr = CipherUtil.decryptToString(new FileInputStream(repoFile), masterKey);
+			String repoFileStr = new String(CipherUtil.decrypt(new FileInputStream(repoFile), masterKey));
 			
 			Serializer serializer = new Persister();
 			return serializer.read(RepoTO.class, repoFileStr);			
@@ -364,7 +381,7 @@ public class CommandLineClient extends Client {
 		out.println("      Detect remote changes and print to STDOUT.");
 		out.println();
 		out.println("  watch [<args>]");
-		out.println("      Performs the sync-command in a loop. In furture releases, this command will");
+		out.println("      Performs the sync-command in a loop. In future releases, this command will");
 		out.println("      watch the file system.");
 		out.println();
 		out.println("      Arguments:");
@@ -374,12 +391,17 @@ public class CommandLineClient extends Client {
 		out.println("      can be used.");
 		out.println();		
 		out.println("  restore [<args>] <paths>");
-		out.println("     Restore the given file paths from the remote repository.");
+		out.println("      Restore the given file paths from the remote repository.");
 		out.println();
 		out.println("      Arguments:");
 		out.println("      -D, --date=<unit(smhDMWY)>       Restore versions prior to the given relative date");
 		out.println("      -D, --date=<dd-mm-yy>            Restore versions prior to the given absolute date");
 		out.println("      -v, --version=<[-]version>       Restore <version> or go back <version> versions");
+		out.println();
+		out.println("  log [<paths>]");
+		out.println("      Print to STDOUT information stored in the local database about the given file paths or");
+		out.println("      all paths known by the database if no path is given. The output format is unstable and");
+		out.println("      might change in future releases.");
 		out.println();
 		
 		out.close();		

@@ -1,3 +1,20 @@
+/*
+ * Syncany, www.syncany.org
+ * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.syncany.tests.util;
 
 import java.io.File;
@@ -5,6 +22,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -18,6 +36,8 @@ import org.syncany.connection.plugins.Connection;
 import org.syncany.connection.plugins.Plugin;
 import org.syncany.connection.plugins.Plugins;
 import org.syncany.connection.plugins.local.LocalConnection;
+import org.syncany.connection.plugins.unreliable_local.UnreliableLocalConnection;
+import org.syncany.connection.plugins.unreliable_local.UnreliableLocalPlugin;
 import org.syncany.crypto.CipherUtil;
 import org.syncany.crypto.SaltedSecretKey;
 
@@ -115,6 +135,20 @@ public class TestConfigUtil {
 		conn.createTransferManager().init();
 		
 		return conn;
+	}	
+	
+	public static UnreliableLocalConnection createTestUnreliableLocalConnection(List<String> failingOperationPatterns) throws Exception {
+		UnreliableLocalPlugin unreliableLocalPlugin = new UnreliableLocalPlugin();
+		UnreliableLocalConnection unreliableLocalConnection = (UnreliableLocalConnection) unreliableLocalPlugin.createConnection();
+				
+		File tempRepoDir = TestFileUtil.createTempDirectoryInSystemTemp(createUniqueName("repo", unreliableLocalConnection));
+		
+		unreliableLocalConnection.setRepositoryPath(tempRepoDir);
+		unreliableLocalConnection.setFailingOperationPatterns(failingOperationPatterns);
+
+		unreliableLocalConnection.createTransferManager().init();
+		
+		return unreliableLocalConnection;
 	}	
 
 	public static void deleteTestLocalConfigAndData(Config config) {

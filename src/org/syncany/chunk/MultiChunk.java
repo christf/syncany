@@ -1,6 +1,6 @@
 /*
  * Syncany, www.syncany.org
- * Copyright (C) 2011 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,7 +58,7 @@ public abstract class MultiChunk {
     }
 
     public abstract InputStream getChunkInputStream(byte[] checksum) throws IOException;
-    public abstract Chunk read() throws IOException;
+    public abstract Chunk read() throws IOException; // TODO [low] Not necessary anymore
     public abstract void write(Chunk chunk) throws IOException;
     public abstract void close() throws IOException;
 

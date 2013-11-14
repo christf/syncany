@@ -1,3 +1,20 @@
+/*
+ * Syncany, www.syncany.org
+ * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.syncany.operations;
 
 import java.io.File;
@@ -30,6 +47,23 @@ import org.syncany.database.PartialFileHistory;
 import org.syncany.util.FileUtil;
 import org.syncany.util.StringUtil;
 
+/**
+ * The indexer combines the chunking process with the corresponding database
+ * lookups for the resulting chunks. It implements the deduplication mechanism 
+ * of Syncany.
+ * 
+ * <p>The class takes a list of files as input and uses the {@link Deduper} to
+ * break these files into individual chunks. By implementing the {@link DeduperListener},
+ * it reacts on chunking events and creates a new database version (with the newly
+ * added/changed/removed files. This functionality is entirely implemented by the
+ * {@link #index(List) index()} method.
+ * 
+ * <p>The class uses the currently loaded {@link Database} as well as a potential  
+ * dirty database into account. Lookups for chunks and file histories are performed 
+ * on both databases.
+ * 
+ * @author Philipp C. Heckel <philipp.heckel@gmail.com>
+ */
 public class Indexer {
 	private static final Logger logger = Logger.getLogger(Indexer.class.getSimpleName());
 	
@@ -45,6 +79,19 @@ public class Indexer {
 		this.dirtyDatabase = dirtyDatabase;
 	}
 	
+	/**
+	 * This method implements the index/deduplication functionality of Syncany. It uses a {@link Deduper}
+	 * to break files down, compares them to the local database and creates a new {@link DatabaseVersion}
+	 * as a result. 
+	 * 
+	 * <p>Depending on what has changed, the new database version will contain new instances of 
+	 * {@link PartialFileHistory}, {@link FileVersion}, {@link FileContent}, {@link ChunkEntry} and 
+	 * {@link MultiChunkEntry}.
+	 * 
+	 * @param files List of files to be deduplicated
+	 * @return New database version containing new/changed/deleted entities
+	 * @throws IOException If the chunking/deduplication cannot read/process any of the files
+	 */
 	// TODO [medium] Performance: To avoid having to parse the checksum twice (status and indexer), the status operation should pass over the FileProperties object in the ChangeSet
 	public DatabaseVersion index(List<File> files) throws IOException {
 		DatabaseVersion newDatabaseVersion = new DatabaseVersion();		
@@ -149,7 +196,7 @@ public class Indexer {
 		}				
 
 		@Override
-		public boolean onFileStart(File file) {
+		public boolean onFileFilter(File file) {
 			logger.log(Level.FINER, "- +File {0}", file); 
 			
 			startFileProperties = fileVersionHelper.captureFileProperties(file, null, false);
@@ -173,7 +220,7 @@ public class Indexer {
 		}
 		
 		@Override
-		public boolean onFileStartDeduplicate(File file) {			
+		public boolean onFileStart(File file) {			
 			return startFileProperties.getType() == FileType.FILE; // Ignore directories and symlinks!
 		}
 
@@ -425,19 +472,19 @@ public class Indexer {
 		}
 		
 		@Override
-		public void onOpenMultiChunk(MultiChunk multiChunk) {
+		public void onMultiChunkOpen(MultiChunk multiChunk) {
 			logger.log(Level.FINER, "- +MultiChunk {0}", StringUtil.toHex(multiChunk.getId()));
 			multiChunkEntry = new MultiChunkEntry(multiChunk.getId());
 		}
 
 		@Override
-		public void onWriteMultiChunk(MultiChunk multiChunk, Chunk chunk) {
+		public void onMultiChunkWrite(MultiChunk multiChunk, Chunk chunk) {
 			logger.log(Level.FINER, "- Chunk > MultiChunk: {0} > {1}", new Object[] { StringUtil.toHex(chunk.getChecksum()), StringUtil.toHex(multiChunk.getId()) });		
 			multiChunkEntry.addChunk(new ChunkEntryId(chunkEntry.getChecksum()));				
 		}
 		
 		@Override
-		public void onCloseMultiChunk(MultiChunk multiChunk) {
+		public void onMultiChunkClose(MultiChunk multiChunk) {
 			logger.log(Level.FINER, "- /MultiChunk {0}", StringUtil.toHex(multiChunk.getId()));
 			
 			newDatabaseVersion.addMultiChunk(multiChunkEntry);

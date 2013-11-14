@@ -1,3 +1,20 @@
+/*
+ * Syncany, www.syncany.org
+ * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.syncany.tests.chunk;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -26,7 +43,7 @@ import org.syncany.chunk.Chunk;
 import org.syncany.chunk.Chunker;
 import org.syncany.chunk.CipherTransformer;
 import org.syncany.chunk.Deduper;
-import org.syncany.chunk.DeduperAdapter;
+import org.syncany.chunk.DeduperListener;
 import org.syncany.chunk.GzipTransformer;
 import org.syncany.chunk.MultiChunk;
 import org.syncany.chunk.MultiChunker;
@@ -172,9 +189,9 @@ public class FrameworkCombinationTest {
 		final ChunkIndex chunkIndex = new ChunkIndex();
 		
 		Deduper deduper = new Deduper(combination.chunker, combination.multiChunker, combination.transformer);
-		deduper.deduplicate(inputFiles, new DeduperAdapter() {			
+		deduper.deduplicate(inputFiles, new DeduperListener() {			
 			@Override
-			public void onWriteMultiChunk(MultiChunk multiChunk, Chunk chunk) {
+			public void onMultiChunkWrite(MultiChunk multiChunk, Chunk chunk) {
 				logger.log(Level.INFO, "    - Adding chunk "+StringUtil.toHex(chunk.getChecksum())+" to multichunk "+StringUtil.toHex(multiChunk.getId())+" ...");
 				chunkIndex.chunkIDToMultiChunkID.put(new ByteArray(chunk.getChecksum()), new ByteArray(multiChunk.getId()));				
 			}								
@@ -217,6 +234,12 @@ public class FrameworkCombinationTest {
 				// Note: In the real implementation, this should be random
 				return firstChunk.getChecksum();
 			}
+			
+			@Override public boolean onFileFilter(File file) { return true; } 
+			@Override public boolean onFileStart(File file) { return file.isFile() && !FileUtil.isSymlink(file); }
+			@Override public void onFileEnd(File file, byte[] checksum) { }				
+			@Override public void onMultiChunkOpen(MultiChunk multiChunk) { }
+			@Override public void onMultiChunkClose(MultiChunk multiChunk) { }
 		});
 		
 		return chunkIndex;

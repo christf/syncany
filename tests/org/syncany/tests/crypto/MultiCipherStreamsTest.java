@@ -1,3 +1,20 @@
+/*
+ * Syncany, www.syncany.org
+ * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.syncany.tests.crypto;
 
 import static org.junit.Assert.assertEquals;
@@ -18,6 +35,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
@@ -29,7 +47,6 @@ import org.syncany.config.Logging;
 import org.syncany.crypto.CipherException;
 import org.syncany.crypto.CipherSpec;
 import org.syncany.crypto.CipherSpecs;
-import org.syncany.crypto.CipherUtil;
 import org.syncany.crypto.MultiCipherOutputStream;
 import org.syncany.crypto.SaltedSecretKey;
 import org.syncany.util.StringUtil;
@@ -46,7 +63,7 @@ public class MultiCipherStreamsTest {
 	@Before
 	public void setup() throws InvalidKeySpecException, NoSuchAlgorithmException, NoSuchProviderException {
 		if (masterKey == null) {
-			masterKey = CipherUtil.createMasterKey("some password");
+			masterKey = createDummyMasterKey();
 		}
 	}
 	
@@ -182,5 +199,15 @@ public class MultiCipherStreamsTest {
 		byte[] decryptedData = bosDecryptedData.toByteArray();
 		
 		return decryptedData;
-	}		
+	}	
+	
+	private SaltedSecretKey createDummyMasterKey() {
+		return new SaltedSecretKey(
+			new SecretKeySpec(
+				StringUtil.fromHex("44fda24d53b29828b62c362529bd9df5c8a92c2736bcae3a28b3d7b44488e36e246106aa5334813028abb2048eeb5e177df1c702d93cf82aeb7b6d59a8534ff0"),
+				"AnyAlgorithm"
+			),
+			StringUtil.fromHex("157599349e0f1bc713afff442db9d4c3201324073d51cb33407600f305500aa3fdb31136cb1f37bd51a48f183844257d42010a36133b32b424dd02bc63b349bc")			
+		);
+	}
 }

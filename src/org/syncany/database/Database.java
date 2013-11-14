@@ -1,6 +1,6 @@
 /*
- * Syncany
- * Copyright (C) 2011 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ * Syncany, www.syncany.org
+ * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,7 +41,6 @@ public class Database {
     	databaseVersions = new ArrayList<DatabaseVersion>();    	
         
     	// Caches
-    	// TODO [high] Write test for database caches!
     	fullDatabaseVersionCache = new DatabaseVersion();    	
     	filenameHistoryCache = new HashMap<String, PartialFileHistory>();
     	databaseVersionIdCache = new HashMap<VectorClock, DatabaseVersion>();

@@ -1,6 +1,6 @@
 /*
  * Syncany, www.syncany.org
- * Copyright (C) 2011 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,12 +22,20 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
-import java.util.Enumeration;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
+ * The fixed chunker is an implementation of the {@link Chunker}. It implements a simple
+ * fixed-offset chunking, i.e. it breaks files at multiples of the given chunk size
+ * parameter. 
+ * 
+ * <p>While it is very fast due to its offset-based approach (and not content-based), it 
+ * performs very badly when bytes are added or removed from the beginning of a file. 
+ * 
+ * <p>Details can be found in chapter 3.4 of the thesis at <a href="http://blog.philippheckel.com/2013/05/20/minimizing-remote-storage-usage-and-synchronization-time-using-deduplication-and-multichunking-syncany-as-an-example/3/#Fixed-Size%20Chunking">blog.philippheckel.com</a>.
+ * The <tt>FixedChunker</tt> implements the chunker described in chapter 3.4.2.
+ * 
  * @author Philipp C. Heckel <philipp.heckel@gmail.com>
  */
 public class FixedChunker extends Chunker {
@@ -37,65 +45,49 @@ public class FixedChunker extends Chunker {
 	public static final String TYPE = "fixed";
 	public static final String PROPERTY_SIZE = "size";
 
-    private int chunkSize;
-    private MessageDigest digest;
-    private MessageDigest fileDigest;    
-    private InputStream fileInputStream;
+    private int chunkSize;   
     private String checksumAlgorithm;
     
     /**
+     * Creates a new fixed offset chunker with the default file/chunk 
+     * checksum algorithm SHA1.
      * 
-     * @param chunkSize in byte
+     * @param chunkSize Size of a chunk in bytes
      */
     public FixedChunker(int chunkSize) {
         this(chunkSize, DEFAULT_DIGEST_ALG);
     }
     
     /**
+     * Creates a new fixed offset chunker.
      * 
-     * @param chunkSize in byte
-     * @param checksumAlgorithm
+     * @param chunkSize Size of a chunk in bytes
+     * @param checksumAlgorithm Algorithm to calculare the chunk and file checksums (e.g. SHA1, MD5)
      */
     public FixedChunker(int chunkSize, String checksumAlgorithm) {
         this.chunkSize = chunkSize;        
- 
-        try {
-            this.digest = MessageDigest.getInstance(checksumAlgorithm);
-            this.fileDigest = MessageDigest.getInstance(checksumAlgorithm);     
-            
-            this.fileDigest.reset();
-            this.fileInputStream = null;
-            
-            this.checksumAlgorithm = checksumAlgorithm;
-        }
-        catch (Exception e) {
-            throw new RuntimeException(e);
-        }        
+        this.checksumAlgorithm = checksumAlgorithm;        
     }
   
     @Override
-    public Enumeration<Chunk> createChunks(File file) throws IOException {
-        fileInputStream = new FileInputStream(file);
-    	return new FixedChunkEnumeration(fileInputStream);
+    public ChunkEnumeration createChunks(File file) throws IOException {
+    	return new FixedChunkEnumeration(new FileInputStream(file));
     }
     
 	@Override
 	public String getChecksumAlgorithm() {
 		return checksumAlgorithm;
-	}
-
-    @Override
-    public void close() {
-    	try { fileInputStream.close(); }
-    	catch (Exception e) { /* Not necessary */ }
-    }
+	}    
 
     @Override
     public String toString() {
-        return "Fixed-"+chunkSize+"-"+digest.getAlgorithm();
+        return "Fixed-"+chunkSize+"-"+checksumAlgorithm;
     }
 
-    public class FixedChunkEnumeration implements Enumeration<Chunk> {
+    public class FixedChunkEnumeration implements ChunkEnumeration {
+    	private MessageDigest digest;
+        private MessageDigest fileDigest;    
+        
         private InputStream in;           
         private byte[] buffer;
         private boolean closed;
@@ -104,6 +96,16 @@ public class FixedChunker extends Chunker {
             this.in = in;
             this.buffer = new byte[chunkSize];
             this.closed = false;
+            
+            try {
+                this.digest = MessageDigest.getInstance(checksumAlgorithm);
+                this.fileDigest = MessageDigest.getInstance(checksumAlgorithm);     
+                
+                this.fileDigest.reset();                                          
+            }
+            catch (Exception e) {
+                throw new RuntimeException(e);
+            }                    
         }
         
         @Override
@@ -113,7 +115,6 @@ public class FixedChunker extends Chunker {
             }
             
             try {
-                //System.out.println("fis ="+fis.available());
                 return in.available() > 0;
             }
             catch (IOException ex) {
@@ -156,7 +157,11 @@ public class FixedChunker extends Chunker {
                 return null;
             }
         }
-        
+
+        @Override
+        public void close() {
+        	try { in.close(); }
+        	catch (Exception e) { /* Not necessary */ }
+        }
     }
 }
-

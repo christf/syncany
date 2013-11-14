@@ -1,3 +1,20 @@
+/*
+ * Syncany, www.syncany.org
+ * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.syncany.operations;
 
 import java.io.File;
@@ -123,26 +140,31 @@ public class UpOperation extends Operation {
 			return result;
 		}
 		else {
-			logger.log(Level.INFO, "Adding newest database version "+newDatabaseVersion.getHeader()+" to local database ...");
-			database.addDatabaseVersion(newDatabaseVersion);
-				
+			// Upload multichunks
 			logger.log(Level.INFO, "Uploading new multichunks ...");
-			uploadMultiChunks(database.getLastDatabaseVersion().getMultiChunks());
-			
+			uploadMultiChunks(newDatabaseVersion.getMultiChunks());			
+							
 			long newestLocalDatabaseVersion = newDatabaseVersion.getVectorClock().get(config.getMachineName());
 
+			// Upload delta database
 			DatabaseRemoteFile remoteDeltaDatabaseFile = new DatabaseRemoteFile("db-"+config.getMachineName()+"-"+newestLocalDatabaseVersion);
 			File localDeltaDatabaseFile = config.getCache().getDatabaseFile(remoteDeltaDatabaseFile.getName());	
 
-			logger.log(Level.INFO, "Saving local delta database file ...");
-			logger.log(Level.INFO, "- Saving versions from: "+newDatabaseVersion.getHeader()+", to: "+newDatabaseVersion.getHeader()+") to file "+localDeltaDatabaseFile+" ...");
-			saveLocalDatabase(database, newDatabaseVersion, newDatabaseVersion, localDeltaDatabaseFile);
+			Database newDeltaDatabase = new Database();
+			newDeltaDatabase.addDatabaseVersion(newDatabaseVersion);
+			
+			logger.log(Level.INFO, "Saving local delta database, version "+newDatabaseVersion.getHeader()+" to file "+localDeltaDatabaseFile+" ...");
+			saveLocalDatabase(newDeltaDatabase, localDeltaDatabaseFile);
 			
 			logger.log(Level.INFO, "- Uploading local delta database file ...");
 			uploadLocalDatabase(localDeltaDatabaseFile, remoteDeltaDatabaseFile);
+
+			// Save local database
+			logger.log(Level.INFO, "Adding newest database version "+newDatabaseVersion.getHeader()+" to local database ...");
+			database.addDatabaseVersion(newDatabaseVersion);
 			
 			if (options.cleanupEnabled()) {
-				cleanupOldDatabases(database, newestLocalDatabaseVersion);
+				cleanupOldDatabases(database, newestLocalDatabaseVersion); // TODO [high] This should be moved to the new 'cleanup' operation 
 			}
 			
 			logger.log(Level.INFO, "Saving local database to file "+config.getDatabaseFile()+" ...");  

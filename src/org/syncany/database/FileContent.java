@@ -1,6 +1,6 @@
 /*
- * Syncany
- * Copyright (C) 2011 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ * Syncany, www.syncany.org
+ * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,8 +26,18 @@ import org.syncany.database.ChunkEntry.ChunkEntryId;
 import org.syncany.util.StringUtil;
 
 /**
+ * A file content represents the content of a file. It contains a list of 
+ * references to {@link ChunkEntry}s, and identifies a content by its checksum.
  *
- * @author pheckel
+ * <p>A file content is implicitly referenced by one or many {@link FileVersion}s
+ * through the checksum attribute. A file content always contains the full list of
+ * chunks it resembles. There are no deltas!
+ * 
+ * <p>Unlike the chunk list in a {@link MultiChunkEntry}, the order of the chunks
+ * is very important, because a file can only be reconstructed if the order of
+ * its chunks are followed.
+ * 
+ * @author Philipp C. Heckel <philipp.heckel@gmail.com>
  */
 public class FileContent {
     private byte[] checksum;

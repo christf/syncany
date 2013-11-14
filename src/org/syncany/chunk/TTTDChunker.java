@@ -1,6 +1,6 @@
 /*
  * Syncany, www.syncany.org
- * Copyright (C) 2011 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
-import java.util.Enumeration;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -45,9 +44,6 @@ public class TTTDChunker extends Chunker {
     private String checksumAlgorithm;
     private String fingerprintAlgorithm;
     private String name;   
-
-    private InputStream fileInputStream;
-    
     
     public TTTDChunker(int Tmin, int Tmax, int D, int Ddash, int windowSize) {
         this(Tmin, Tmax, D, Ddash, windowSize, DEFAULT_DIGEST_ALG, DEFAULT_FINGERPRINT_ALG);
@@ -94,28 +90,21 @@ public class TTTDChunker extends Chunker {
     }        
    
     @Override
-    public Enumeration<Chunk> createChunks(File file) throws IOException {
-    	fileInputStream = new FileInputStream(file);
-        return new TTTDEnumeration(fileInputStream);
+    public ChunkEnumeration createChunks(File file) throws IOException {
+        return new TTTDEnumeration(new FileInputStream(file));
     }    
 
 	@Override
 	public String getChecksumAlgorithm() {
 		return checksumAlgorithm;
-	}    
-    
-    @Override
-    public void close() {
-    	try { fileInputStream.close(); }
-    	catch (Exception e) { /* Not necessary */ }
-    }    
+	}        
 
     @Override
     public String toString() {
         return name;
     }
     
-    public class TTTDEnumeration implements Enumeration<Chunk> {        
+    public class TTTDEnumeration implements ChunkEnumeration {        
         private InputStream in;           
         private boolean closed;
         private byte[] c;
@@ -228,7 +217,7 @@ public class TTTDChunker extends Chunker {
                     breakpoint = bufpos;
                 }
                 
-                // Inclue breakpoint
+                // Increase breakpoint
                 breakpoint++;
                 
                 // Create chunk
@@ -246,6 +235,12 @@ public class TTTDChunker extends Chunker {
                 return null;
             }
         }     
+        
+        @Override
+        public void close() {
+        	try { in.close(); }
+        	catch (Exception e) { /* Not necessary */ }
+        }   
         
         /**
          * Fixes the read errors occurring with Cipher streams in the standard

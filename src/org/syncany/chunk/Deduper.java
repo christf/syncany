@@ -1,10 +1,28 @@
+/*
+ * Syncany, www.syncany.org
+ * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.syncany.chunk;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Enumeration;
 import java.util.List;
+
+import org.syncany.chunk.Chunker.ChunkEnumeration;
 
 /**
  * The Deduper implements the core deduplication algorithm used by Syncany. 
@@ -51,21 +69,21 @@ public class Deduper {
 		
 		for (File file : files) {
 			// Filter ignored files
-			boolean fileAccepted = listener.onFileStart(file);
+			boolean fileAccepted = listener.onFileFilter(file);
 			
 			if (!fileAccepted) {
 				continue;
 			}
 			
 			// Decide whether to index the contents
-			boolean dedupContents = listener.onFileStartDeduplicate(file);
+			boolean dedupContents = listener.onFileStart(file);
 
 			if (dedupContents) {
 				// Create chunks from file
-				Enumeration<Chunk> chunks = chunker.createChunks(file);
+				ChunkEnumeration chunksEnum = chunker.createChunks(file);
 
-				while (chunks.hasMoreElements()) {
-					chunk = chunks.nextElement();
+				while (chunksEnum.hasMoreElements()) {
+					chunk = chunksEnum.nextElement();
 
 					// old chunk
 					if (!listener.onChunk(chunk)) {
@@ -78,7 +96,7 @@ public class Deduper {
 						// - Check if multichunk full
 						if (multiChunk != null && multiChunk.isFull()) {
 							multiChunk.close();
-							listener.onCloseMultiChunk(multiChunk);
+							listener.onMultiChunkClose(multiChunk);
 
 							multiChunk = null;
 						}
@@ -91,19 +109,19 @@ public class Deduper {
 							multiChunk = multiChunker.createMultiChunk(newMultiChunkId, 
 								transformer.createOutputStream(new FileOutputStream(multiChunkFile)));
 
-							listener.onOpenMultiChunk(multiChunk);
+							listener.onMultiChunkOpen(multiChunk);
 						}
 
 						// - Add chunk data
 						multiChunk.write(chunk);						
-						listener.onWriteMultiChunk(multiChunk, chunk);						
+						listener.onMultiChunkWrite(multiChunk, chunk);						
 					}
 
 					listener.onFileAddChunk(file, chunk);										
 				}
 
 				// Closing file is necessary!
-				chunker.close(); 
+				chunksEnum.close(); 
 			}
 
 			if (chunk != null) {			
@@ -121,7 +139,7 @@ public class Deduper {
 		if (multiChunk != null) {
 			// Data
 			multiChunk.close();
-			listener.onCloseMultiChunk(multiChunk);
+			listener.onMultiChunkClose(multiChunk);
 
 			multiChunk = null;
 		}		

@@ -1,6 +1,6 @@
 /*
- * Syncany
- * Copyright (C) 2011 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ * Syncany, www.syncany.org
+ * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,8 +23,10 @@ import java.io.OutputStream;
 import java.util.Map;
 
 /**
- *
- * @author pheckel
+ * Implements an empty {@link Transformer}. Used if no compression/encryption
+ * is necessary.
+ * 
+ * @author Philipp C. Heckel <philipp.heckel@gmail.com>
  */
 public class NoTransformer extends Transformer {
 	@Override
@@ -55,6 +57,5 @@ public class NoTransformer extends Transformer {
     @Override
     public String toString() {
         return (nextTransformer == null) ? "None" : "None-"+nextTransformer;
-    }
-    
+    }    
 }
