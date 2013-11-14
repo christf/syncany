@@ -1,18 +1,52 @@
 package org.syncany.database.dao;
 
+import java.io.Serializable;
 import java.util.List;
 
+import org.hibernate.Query;
 import org.hibernate.Session;
-import org.syncany.database.util.HibernateUtil;
+import org.hibernate.Transaction;
+import org.syncany.database.persistence.DatabaseVersionEntity;
+import org.syncany.database.util.PersistenceUtil;
 
-public abstract class DAO {
+public class DAO<T>{
 	
-	protected List<Object> getAll(Class<?> clazz) {
-		List<Object> objects = null;
-		Session session = HibernateUtil.getSessionFactory().openSession();
+    private Class<T> type;
+    
+    public DAO(Class<T> daoClass) {
+    	this.type = daoClass;
+    }
+	
+	public T save(T entity) {
+		Session session = PersistenceUtil.getSessionFactory().openSession();
+		Transaction transaction = session.beginTransaction();
+		
+		session.save(entity);
+		transaction.commit();
+		
+		session.flush();
+		session.close();
+		
+		return entity;
+	}
+	
+	public T get(Serializable entity) {
+		Session session = PersistenceUtil.getSessionFactory().openSession();
+		@SuppressWarnings("unchecked")
+		T readEntity = (T) session.get(DatabaseVersionEntity.class, entity);
+		session.close();
+		return readEntity;
+	}
+	
+	@SuppressWarnings("unchecked")
+	public List<T> getAll() {
+		List<T> objects = null;
+		Session session = PersistenceUtil.getSessionFactory().openSession();
 
 		session.beginTransaction();
-		objects = session.createQuery("from " + clazz.getName()).list();
+		
+		Query query = session.createQuery("from " + type.getName());
+		objects = query.list();
 
 		session.close();
 		return objects;

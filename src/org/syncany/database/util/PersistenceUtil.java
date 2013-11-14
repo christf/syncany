@@ -3,7 +3,7 @@ package org.syncany.database.util;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 
-public class HibernateUtil {
+public class PersistenceUtil {
 	private static SessionFactory sessionFactory;
 	private static Configuration config;
 	

@@ -8,7 +8,7 @@
     <session-factory>
 
      <property name="connection.driver_class">org.hsqldb.jdbcDriver</property>
-     <property name="connection.url">jdbc:hsqldb:file:testdb;shutdown=true;write_delay=false; </property>
+     <property name="connection.url">jdbc:hsqldb:file:database/localdatabase;shutdown=true;write_delay=false; </property>
      <property name="connection.username">sa</property>
      <property name="connection.password"></property>
      <property name="hibernate.connection.writedelay">false</property>
@@ -19,8 +19,8 @@
      
      <property name="hbm2ddl.auto">update</property>
      
-     <mapping class="org.syncany.database.SimpleEntity"/>
-	 <mapping class="org.syncany.database.DatabaseVersionEntity"/>
-	
+	 <mapping class="org.syncany.database.persistence.DatabaseVersionEntity"/>
+	 <mapping class="org.syncany.database.persistence.ChunkEntity"/>
+
     </session-factory>
 </hibernate-configuration>

@@ -1,9 +1,12 @@
-package org.syncany.database;
+package org.syncany.database.persistence;
 
 import java.io.Serializable;
 import java.util.Date;
 
+import javax.persistence.Column;
 import javax.persistence.Embeddable;
+
+import org.syncany.database.VectorClock;
 
 @Embeddable
 public class DatabaseVersionHeaderEntity implements Serializable {
@@ -11,16 +14,19 @@ public class DatabaseVersionHeaderEntity implements Serializable {
 	private static final long serialVersionUID = 1L;
 	
     // DB Version and versions of other users (= DB basis)
+	@Column(name = "date", nullable = false)
     private Date date;
-    private VectorClock vectorClock; // vector clock, machine name to database version map
-    private String client;
-    private String previousClient;
-    
+	
+	@Column(name = "vectorclock", nullable = false)
+	private VectorClock vectorClock; // vector clock, machine name to database version map
+	
+	@Column(name = "client", nullable = false)
+	private String client;
+        
     public DatabaseVersionHeaderEntity() {
     	this.date = new Date();
     	this.vectorClock = new VectorClock();
     	this.client = "UnknownMachine";
-    	this.previousClient = "";
     }    
 
 	public Date getDate() {
@@ -72,14 +78,6 @@ public class DatabaseVersionHeaderEntity implements Serializable {
 		this.client = client;
 	}
 
-	public String getPreviousClient() {
-		return previousClient;
-	}
-
-	public void setPreviousClient(String previousClient) {
-		this.previousClient = previousClient;
-	}
-
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -126,11 +124,6 @@ public class DatabaseVersionHeaderEntity implements Serializable {
 		sb.append(vectorClock.toString());
 		sb.append("/T=");
 		sb.append(date.getTime());
-		
-		if (previousClient != null) {
-			sb.append("/");
-			sb.append(previousClient);
-		}
 		
 		return sb.toString();
 	}

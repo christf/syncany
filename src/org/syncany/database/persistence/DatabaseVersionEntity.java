@@ -1,4 +1,4 @@
-package org.syncany.database;
+package org.syncany.database.persistence;
 
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
