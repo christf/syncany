@@ -22,7 +22,6 @@ import java.util.logging.Logger;
 
 import org.syncany.config.Config;
 import org.syncany.database.Database;
-import org.syncany.operations.LoadDatabaseOperation.LoadDatabaseOperationResult;
 
 public class WatchOperation extends Operation {
 	private static final Logger logger = Logger.getLogger(WatchOperation.class.getSimpleName());
@@ -33,8 +32,9 @@ public class WatchOperation extends Operation {
 		this.options = options;
 	}	
 	
-	public OperationResult execute() throws Exception {
-		Database database = ((LoadDatabaseOperationResult) new LoadDatabaseOperation(config).execute()).getDatabase();
+	@Override
+	public WatchOperationResult execute() throws Exception {
+		Database database = loadLocalDatabase();
 		
 		while (true) {
 			logger.log(Level.INFO, "Running sync ...");

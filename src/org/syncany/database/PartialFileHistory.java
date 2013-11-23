@@ -18,8 +18,8 @@
 package org.syncany.database;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Map;
-import java.util.Random;
 import java.util.TreeMap;
 
 /**
@@ -27,12 +27,9 @@ import java.util.TreeMap;
  * @author pheckel
  */
 public class PartialFileHistory {
+	//TODO [medium] switch to a 128 bits id to limit the collision risk
     private Long fileId;
     private TreeMap<Long, FileVersion> versions;
-    
-    public PartialFileHistory() {
-    	this(new Random().nextLong());
-    }    
     
     public PartialFileHistory(long fileId) {
         this.fileId = fileId;
@@ -63,7 +60,16 @@ public class PartialFileHistory {
         return versions.lastEntry().getValue();
     }   
 
-    /* package */ public void addFileVersion(FileVersion fileVersion) {
+    /**
+     * Returns an iterator on the version numbers stored in this partial history, in reverse order. 
+     * 
+     * @return an iterator on the version numbers in reverse order 
+     */
+    public Iterator<Long> getDescendingVersionNumber() {
+    	return Collections.unmodifiableSet(versions.descendingKeySet()).iterator();
+    }
+    
+    /* package */ void addFileVersion(FileVersion fileVersion) {
         versions.put(fileVersion.getVersion(), fileVersion);        
     }
     

@@ -53,11 +53,8 @@ import org.syncany.database.DatabaseVersionHeader;
 import org.syncany.database.FileContent;
 import org.syncany.database.FileVersion;
 import org.syncany.database.MultiChunkEntry;
-import org.syncany.database.RemoteDatabaseFile;
 import org.syncany.database.VectorClock;
 import org.syncany.database.XmlDatabaseDAO;
-import org.syncany.operations.LoadDatabaseOperation.LoadDatabaseOperationResult;
-import org.syncany.operations.LsRemoteOperation.RemoteStatusOperationResult;
 import org.syncany.operations.StatusOperation.ChangeSet;
 import org.syncany.operations.actions.FileCreatingFileSystemAction;
 import org.syncany.operations.actions.FileSystemAction;
@@ -65,6 +62,37 @@ import org.syncany.operations.actions.FileSystemAction.InconsistentFileSystemExc
 import org.syncany.util.FileUtil;
 import org.syncany.util.StringUtil;
 
+/**
+ * The down operation implements a central part of Syncany's business logic. It determines
+ * whether other clients have uploaded new changes, downloads and compares these changes to
+ * the local database, and applies them locally. The down operation is the complement to the
+ * {@link UpOperation}.
+ * 
+ * <p>The general operation flow is as follows:
+ * <ol>
+ *  <li>List all database versions on the remote storage using the {@link LsRemoteOperation}
+ *      (implemented in {@link #listUnknownRemoteDatabases(Database, TransferManager) listUnknownRemoteDatabases()}</li>
+ *  <li>Download unknown databases using a {@link TransferManager} (if any), skip the rest down otherwise
+ *      (implemented in {@link #downloadUnknownRemoteDatabases(TransferManager, List) downloadUnknownRemoteDatabases()}</li>
+ *  <li>Load remote database headers (branches) and compare them to the local database to determine a winner
+ *      using several methods of the {@link DatabaseReconciliator}</li>
+ *  <li>Determine whether the local branch conflicts with the winner branch; if so, prune conflicting
+ *      local database versions (using {@link DatabaseReconciliator#findLosersPruneBranch(Branch, Branch)
+ *      findLosersPruneBranch()})</li>
+ *  <li>Determine whether the local branch needs to be updated (new database versions); if so, determine
+ *      local {@link FileSystemAction}s</li>
+ *  <li>Determine, download and decrypt required multi chunks from remote storage from file actions
+ *      (implemented in {@link #determineMultiChunksToDownload(FileVersion, Database, Database) determineMultiChunksToDownload()},
+ *      and {@link #downloadAndDecryptMultiChunks(Set) downloadAndDecryptMultiChunks()})</li>
+ *  <li>Apply file system actions locally, creating conflict files where necessary if local file does
+ *      not match the expected file (implemented in {@link #applyFileSystemActions(List) applyFileSystemActions()} </li>
+ *  <li>Save local database and update known database list (database files that do not need to be 
+ *      downloaded anymore</li>  
+ * </ol>
+ *     
+ * @see DatabaseReconciliator
+ * @author Philipp C. Heckel <philipp.heckel@gmail.com>
+ */
 public class DownOperation extends Operation {
 	private static final Logger logger = Logger.getLogger(DownOperation.class.getSimpleName());
 	
@@ -92,7 +120,8 @@ public class DownOperation extends Operation {
 		this.result = new DownOperationResult();
 	}	
 	
-	public OperationResult execute() throws Exception {
+	@Override
+	public DownOperationResult execute() throws Exception {
 		logger.log(Level.INFO, "");
 		logger.log(Level.INFO, "Running 'Sync down' at client "+config.getMachineName()+" ...");
 		logger.log(Level.INFO, "--------------------------------------------");		
@@ -170,10 +199,7 @@ public class DownOperation extends Operation {
 	}
 
 	private void initOperationVariables() throws Exception {		
-		localDatabase = (localDatabase != null) 
-			? localDatabase
-			: ((LoadDatabaseOperationResult) new LoadDatabaseOperation(config).execute()).getDatabase();
-		
+		localDatabase = (localDatabase != null) ? localDatabase : loadLocalDatabase();		
 		localBranch = localDatabase.getBranch();	
 
 		transferManager = config.getConnection().createTransferManager();		
@@ -201,7 +227,10 @@ public class DownOperation extends Operation {
 				logger.log(Level.INFO, "    * Removing "+databaseVersionHeader+" ...");
 				localDatabase.removeDatabaseVersion(databaseVersion);
 				
-				DatabaseRemoteFile remoteFileToPrune = new DatabaseRemoteFile("db-"+config.getMachineName()+"-"+databaseVersionHeader.getVectorClock().get(config.getMachineName()));
+				String remoteFileToPruneClientName = config.getMachineName();
+				long remoteFileToPruneVersion = databaseVersionHeader.getVectorClock().get(config.getMachineName());				
+				DatabaseRemoteFile remoteFileToPrune = new DatabaseRemoteFile(remoteFileToPruneClientName, remoteFileToPruneVersion);
+				
 				logger.log(Level.INFO, "    * Deleting remote database file "+remoteFileToPrune+" ...");
 				transferManager.delete(remoteFileToPrune);
 			}
@@ -211,6 +240,23 @@ public class DownOperation extends Operation {
 		}		
 	}
 
+	/**
+	 * This method uses the {@link DatabaseReconciliator} to compare the local database with the 
+	 * downloaded remote databases, in order to determine a winner. The winner's database versions
+	 * will be applied locally.
+	 * 
+	 * <p>For the comparison, the {@link DatabaseVersionHeader}s (mainly the {@link VectorClock}) of each
+	 * database version are compared. Using these vector clocks, the underlying algorithms determine  
+	 * potential conflicts (between database versions, = simultaneous vector clocks), and resolve these 
+	 * conflicts by comparing local timestamps. 
+	 * 
+	 * <p>The detailed algorithm is described in the {@link DatabaseReconciliator}.
+	 * 
+	 * @param localDatabase The local database (to be compared with the remote databases)
+	 * @param unknownRemoteBranches The newly downloaded remote database version headers (= branches)
+	 * @return Returns the branch of the winner 
+	 * @throws Exception If any kind of error occurs (...)
+	 */
 	private Branch determineWinnerBranch(Database localDatabase, Branches unknownRemoteBranches) throws Exception {
 		logger.log(Level.INFO, "Detect updates and conflicts ...");
 		DatabaseReconciliator databaseReconciliator = new DatabaseReconciliator();
@@ -227,7 +273,7 @@ public class DownOperation extends Operation {
 			logger.log(Level.FINEST, "- Database reconciliation results:");
 			logger.log(Level.FINEST, "  + localBranch: "+localBranch);
 			logger.log(Level.FINEST, "  + unknownRemoteBranches: "+unknownRemoteBranches);
-			logger.log(Level.FINEST, "  + allStitchedBranches: "+allStitchedBranches);
+			//logger.log(Level.FINEST, "  + allStitchedBranches: "+allStitchedBranches);
 			logger.log(Level.FINEST, "  + lastCommonHeader: "+lastCommonHeader);
 			logger.log(Level.FINEST, "  + firstConflictingHeaders: "+firstConflictingHeaders);
 			logger.log(Level.FINEST, "  + winningFirstConflictingHeaders: "+winningFirstConflictingHeaders);
@@ -323,7 +369,7 @@ public class DownOperation extends Operation {
 		for (MultiChunkEntry multiChunkEntry : unknownMultiChunks) {
 			File localEncryptedMultiChunkFile = config.getCache().getEncryptedMultiChunkFile(multiChunkEntry.getId());
 			File localDecryptedMultiChunkFile = config.getCache().getDecryptedMultiChunkFile(multiChunkEntry.getId());
-			MultiChunkRemoteFile remoteMultiChunkFile = new MultiChunkRemoteFile(localEncryptedMultiChunkFile.getName()); // TODO [low] Make MultiChunkRemoteFile class, or something like that
+			MultiChunkRemoteFile remoteMultiChunkFile = new MultiChunkRemoteFile(localEncryptedMultiChunkFile.getName()); 
 			
 			logger.log(Level.INFO, "  + Downloading multichunk "+StringUtil.toHex(multiChunkEntry.getId())+" ...");
 			transferManager.download(remoteMultiChunkFile, localEncryptedMultiChunkFile);
@@ -375,8 +421,8 @@ public class DownOperation extends Operation {
 				clientVersionTo = databaseVersionHeader.getVectorClock();
 			}
 			
-			String potentialDatabaseShortFileNameForRange = "db-"+clientName+"-"+clientVersionTo.get(clientName);
-			File databaseFileForRange = shortFilenameToFileMap.get(potentialDatabaseShortFileNameForRange);
+			DatabaseRemoteFile potentialDatabaseRemoteFileForRange = new DatabaseRemoteFile(clientName, clientVersionTo.get(clientName)); 
+			File databaseFileForRange = shortFilenameToFileMap.get(potentialDatabaseRemoteFileForRange.getName());
 			
 			if (databaseFileForRange != null) {
 				// Load database
@@ -395,8 +441,9 @@ public class DownOperation extends Operation {
 
 	private Branches readUnknownDatabaseVersionHeaders(List<File> remoteDatabases) throws IOException {
 		logger.log(Level.INFO, "Loading database headers, creating branches ...");
+
 		// Sort files (db-a-1 must be before db-a-2 !)
-		Collections.sort(remoteDatabases); // TODO [medium] natural sort is a workaround, database file names should be centrally managed, db-name-0000000009 avoids natural sort  
+		Collections.sort(remoteDatabases);   
 		
 		// Read database files
 		Branches unknownRemoteBranches = new Branches();
@@ -405,8 +452,8 @@ public class DownOperation extends Operation {
 		for (File remoteDatabaseFileInCache : remoteDatabases) {
 			Database remoteDatabase = new Database(); // Database cannot be reused, since these might be different clients
 		
-			RemoteDatabaseFile remoteDatabaseFile = new RemoteDatabaseFile(remoteDatabaseFileInCache);
-			dbDAO.load(remoteDatabase, remoteDatabaseFile.getFile());		// TODO [medium] Performance: This is very, very, very inefficient, DB is loaded and then discarded	
+			DatabaseRemoteFile remoteDatabaseFile = new DatabaseRemoteFile(remoteDatabaseFileInCache.getName());
+			dbDAO.load(remoteDatabase, remoteDatabaseFileInCache, true); // only load headers!			
 			List<DatabaseVersion> remoteDatabaseVersions = remoteDatabase.getDatabaseVersions();			
 			
 			// Populate branches
@@ -422,7 +469,7 @@ public class DownOperation extends Operation {
 	}
 
 	private List<RemoteFile> listUnknownRemoteDatabases(Database database, TransferManager transferManager) throws Exception {
-		return ((RemoteStatusOperationResult) new LsRemoteOperation(config, database, transferManager).execute()).getUnknownRemoteDatabases();
+		return (new LsRemoteOperation(config, database, transferManager).execute()).getUnknownRemoteDatabases();
 	}
 	
 	private List<File> downloadUnknownRemoteDatabases(TransferManager transferManager, List<RemoteFile> unknownRemoteDatabases) throws StorageException {
@@ -433,7 +480,7 @@ public class DownOperation extends Operation {
 			File unknownRemoteDatabaseFileInCache = config.getCache().getDatabaseFile(remoteFile.getName());
 
 			logger.log(Level.INFO, "- Downloading {0} to local cache at {1}", new Object[] { remoteFile.getName(), unknownRemoteDatabaseFileInCache });
-			transferManager.download(new DatabaseRemoteFile(remoteFile.getName(), remoteFile.getSource()), unknownRemoteDatabaseFileInCache);
+			transferManager.download(new DatabaseRemoteFile(remoteFile.getName()), unknownRemoteDatabaseFileInCache);
 						
 			unknownRemoteDatabasesInCache.add(unknownRemoteDatabaseFileInCache);
 			result.getDownloadedUnknownDatabases().add(remoteFile.getName());
@@ -442,6 +489,7 @@ public class DownOperation extends Operation {
 		return unknownRemoteDatabasesInCache;
 	}	
 	
+	// TODO [low] This should be in the local RDMS, not in a plain text file
 	private void writeAlreadyDownloadedDatabasesListFromFile(List<RemoteFile> unknownRemoteDatabases) throws IOException {
 		FileWriter fr = new FileWriter(config.getKnownDatabaseListFile(), true); 
 		

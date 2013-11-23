@@ -37,7 +37,6 @@ import org.syncany.database.ChunkEntry;
 import org.syncany.database.ChunkEntry.ChunkEntryId;
 import org.syncany.database.Database;
 import org.syncany.database.DatabaseVersion;
-import org.syncany.database.XmlDatabaseDAO;
 import org.syncany.database.FileContent;
 import org.syncany.database.FileVersion;
 import org.syncany.database.FileVersion.FileStatus;
@@ -45,6 +44,7 @@ import org.syncany.database.FileVersion.FileType;
 import org.syncany.database.MultiChunkEntry;
 import org.syncany.database.PartialFileHistory;
 import org.syncany.database.VectorClock;
+import org.syncany.database.XmlDatabaseDAO;
 import org.syncany.tests.util.TestAssertUtil;
 import org.syncany.tests.util.TestDatabaseUtil;
 import org.syncany.tests.util.TestFileUtil;
@@ -246,7 +246,7 @@ public class XmlDatabaseDAOTest {
 		// Create directories (no content!)
 
 		// File A
-		PartialFileHistory fileHistoryA = new PartialFileHistory();
+		PartialFileHistory fileHistoryA = new PartialFileHistory(1L);
 		newDatabaseVersion.addFileHistory(fileHistoryA);
 		
         FileVersion versionA1 = new FileVersion();
@@ -268,7 +268,7 @@ public class XmlDatabaseDAOTest {
         newDatabaseVersion.addFileVersionToHistory(fileHistoryA.getFileId(), versionA2);	
 		       
         // File B
-		PartialFileHistory fileHistoryB = new PartialFileHistory();
+		PartialFileHistory fileHistoryB = new PartialFileHistory(2L);
 		newDatabaseVersion.addFileHistory(fileHistoryB);
 		
         FileVersion versionB1 = new FileVersion();
@@ -416,6 +416,5 @@ public class XmlDatabaseDAOTest {
 		TestAssertUtil.assertDatabaseEquals(writtenDatabase, readDatabase);
 		
 		return readDatabase;
-	}		
-	
+	}			
 }

@@ -29,13 +29,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.syncany.config.Config;
+import org.syncany.connection.plugins.DatabaseRemoteFile;
 import org.syncany.connection.plugins.RemoteFile;
 import org.syncany.connection.plugins.StorageException;
 import org.syncany.connection.plugins.TransferManager;
 import org.syncany.database.Database;
-import org.syncany.database.RemoteDatabaseFile;
 import org.syncany.database.VectorClock;
-import org.syncany.operations.LoadDatabaseOperation.LoadDatabaseOperationResult;
 
 public class LsRemoteOperation extends Operation {
 	private static final Logger logger = Logger.getLogger(LsRemoteOperation.class.getSimpleName());	
@@ -55,14 +54,13 @@ public class LsRemoteOperation extends Operation {
 		this.alreadyDownloadedRemoteDatabases = new HashSet<String>();
 	}	
 	
-	public OperationResult execute() throws Exception {
+	@Override
+	public RemoteStatusOperationResult execute() throws Exception {
 		logger.log(Level.INFO, "");
 		logger.log(Level.INFO, "Running 'Remote Status' at client "+config.getMachineName()+" ...");
 		logger.log(Level.INFO, "--------------------------------------------");
 		
-		Database database = (loadedDatabase != null) 
-				? loadedDatabase
-				: ((LoadDatabaseOperationResult) new LoadDatabaseOperation(config).execute()).getDatabase();		
+		Database database = (loadedDatabase != null) ? loadedDatabase : loadLocalDatabase();		
 		
 		TransferManager transferManager = (loadedTransferManager != null)
 				? loadedTransferManager
@@ -110,7 +108,7 @@ public class LsRemoteOperation extends Operation {
 			VectorClock knownDatabaseVersions = db.getLastDatabaseVersion().getVectorClock();
 			
 			for (RemoteFile remoteFile : remoteDatabaseFiles.values()) {
-				RemoteDatabaseFile remoteDatabaseFile = new RemoteDatabaseFile(remoteFile.getName());
+				DatabaseRemoteFile remoteDatabaseFile = new DatabaseRemoteFile(remoteFile.getName());
 				
 				String clientName = remoteDatabaseFile.getClientName();
 				Long knownClientVersion = knownDatabaseVersions.get(clientName);

@@ -42,17 +42,33 @@ import org.syncany.database.DatabaseVersion;
 import org.syncany.database.FileVersion;
 import org.syncany.database.MultiChunkEntry;
 import org.syncany.database.PartialFileHistory;
-import org.syncany.database.RemoteDatabaseFile;
 import org.syncany.database.VectorClock;
-import org.syncany.database.XmlDatabaseDAO;
-import org.syncany.operations.LoadDatabaseOperation.LoadDatabaseOperationResult;
-import org.syncany.operations.LsRemoteOperation.RemoteStatusOperationResult;
+import org.syncany.database.XmlDatabaseDAO; 
 import org.syncany.operations.StatusOperation.ChangeSet;
 import org.syncany.operations.StatusOperation.StatusOperationOptions;
 import org.syncany.operations.StatusOperation.StatusOperationResult;
 import org.syncany.operations.UpOperation.UpOperationResult.UpResultCode;
 import org.syncany.util.StringUtil;
 
+/**
+ * The up operation implements a central part of Syncany's business logic. It analyzes the local
+ * folder, deduplicates new or changed files and uploads newly packed multichunks to the remote
+ * storage. The up operation is the complement to the {@link DownOperation}.
+ * 
+ * <p>The general operation flow is as follows:
+ * <ol>
+ *   <li>Load local database (if not already loaded)</li>
+ *   <li>Analyze local directory using the {@link StatusOperation} to determine any changed/new/deleted files</li>
+ *   <li>Determine if there are unknown remote databases using the {@link LsRemoteOperation}, and skip the rest if there are</li>
+ *   <li>If there are changes, use the {@link Deduper} and {@link Indexer} to create a new {@link DatabaseVersion} 
+ *       (including new chunks, multichunks, file contents and file versions).</li>
+ *   <li>Upload new multichunks (if any) using a {@link TransferManager}</li>
+ *   <li>Save new {@link DatabaseVersion} to a new (delta) {@link Database} and upload it</li>
+ *   <li>Add delta database to local database and store it locally</li>
+ * </ol>
+ * 
+ * @author Philipp C. Heckel <philipp.heckel@gmail.com>
+ */
 public class UpOperation extends Operation {
 	private static final Logger logger = Logger.getLogger(UpOperation.class.getSimpleName());
 
@@ -82,24 +98,22 @@ public class UpOperation extends Operation {
 		this.loadedDatabase = database;
 	}
 	
-	public OperationResult execute() throws Exception {
+	@Override
+	public UpOperationResult execute() throws Exception {
 		logger.log(Level.INFO, "");
 		logger.log(Level.INFO, "Running 'Sync up' at client "+config.getMachineName()+" ...");
 		logger.log(Level.INFO, "--------------------------------------------");
 		
 		// Load database
-		Database database = (loadedDatabase != null) 
-				? loadedDatabase
-				: ((LoadDatabaseOperationResult) new LoadDatabaseOperation(config).execute()).getDatabase();
+		Database database = (loadedDatabase != null) ? loadedDatabase : loadLocalDatabase();
 		
 		// Load dirty database (if existent) 
 		if (config.getDirtyDatabaseFile().exists()) {
-			dirtyDatabase = 
-				((LoadDatabaseOperationResult) new LoadDatabaseOperation(config, config.getDirtyDatabaseFile()).execute()).getDatabase();
+			dirtyDatabase = loadLocalDatabase(config.getDirtyDatabaseFile());
 		}
 		
 		// Find local changes
-		ChangeSet statusChangeSet = ((StatusOperationResult) new StatusOperation(config, database, options.getStatusOptions()).execute()).getChangeSet();
+		ChangeSet statusChangeSet = (new StatusOperation(config, database, options.getStatusOptions()).execute()).getChangeSet();
 		result.getStatusResult().setChangeSet(statusChangeSet);
 		
 		if (!statusChangeSet.hasChanges()) {
@@ -111,7 +125,7 @@ public class UpOperation extends Operation {
 		
 		// Find remote changes (unless --force is enabled)
 		if (!options.forceUploadEnabled()) {
-			List<RemoteFile> unknownRemoteDatabases = ((RemoteStatusOperationResult) new LsRemoteOperation(config, database, transferManager).execute()).getUnknownRemoteDatabases();
+			List<RemoteFile> unknownRemoteDatabases = (new LsRemoteOperation(config, database, transferManager).execute()).getUnknownRemoteDatabases();
 			
 			if (unknownRemoteDatabases.size() > 0) {
 				logger.log(Level.INFO, "There are remote changes. Call 'down' first or use --force, Luke!.");
@@ -147,7 +161,7 @@ public class UpOperation extends Operation {
 			long newestLocalDatabaseVersion = newDatabaseVersion.getVectorClock().get(config.getMachineName());
 
 			// Upload delta database
-			DatabaseRemoteFile remoteDeltaDatabaseFile = new DatabaseRemoteFile("db-"+config.getMachineName()+"-"+newestLocalDatabaseVersion);
+			DatabaseRemoteFile remoteDeltaDatabaseFile = new DatabaseRemoteFile(config.getMachineName(), newestLocalDatabaseVersion);
 			File localDeltaDatabaseFile = config.getCache().getDatabaseFile(remoteDeltaDatabaseFile.getName());	
 
 			Database newDeltaDatabase = new Database();
@@ -247,15 +261,12 @@ public class UpOperation extends Operation {
 
 	private DatabaseVersion index(List<File> localFiles, Database database) throws FileNotFoundException, IOException {			
 		// Get last vector clock
-		String previousClient = null;
 		VectorClock lastVectorClock = null;
 		
 		if (database.getLastDatabaseVersion() != null) {
-			previousClient = database.getLastDatabaseVersion().getClient();
 			lastVectorClock = database.getLastDatabaseVersion().getVectorClock();
 		}
 		else {
-			previousClient = null;
 			lastVectorClock = new VectorClock();
 		}
 		
@@ -290,7 +301,6 @@ public class UpOperation extends Operation {
 		newDatabaseVersion.setVectorClock(newVectorClock);
 		newDatabaseVersion.setTimestamp(new Date());	
 		newDatabaseVersion.setClient(config.getMachineName());
-		newDatabaseVersion.setPreviousClient(previousClient);
 						
 		return newDatabaseVersion;
 	}
@@ -298,10 +308,10 @@ public class UpOperation extends Operation {
 	private void cleanupOldDatabases(Database database, long newestLocalDatabaseVersion) throws Exception {
 		// Retrieve and sort machine's database versions
 		Map<String, RemoteFile> ownRemoteDatabaseFiles = transferManager.list("db-"+config.getMachineName()+"-"); // TODO [low] Use file prefix or other method
-		List<RemoteDatabaseFile> ownDatabaseFiles = new ArrayList<RemoteDatabaseFile>();	
+		List<DatabaseRemoteFile> ownDatabaseFiles = new ArrayList<DatabaseRemoteFile>();	
 		
 		for (RemoteFile ownRemoteDatabaseFile : ownRemoteDatabaseFiles.values()) {
-			ownDatabaseFiles.add(new RemoteDatabaseFile(ownRemoteDatabaseFile.getName()));
+			ownDatabaseFiles.add(new DatabaseRemoteFile(ownRemoteDatabaseFile.getName()));
 		}
 		
 		Collections.sort(ownDatabaseFiles);
@@ -314,8 +324,8 @@ public class UpOperation extends Operation {
 		
 		logger.log(Level.INFO, "- Performing cleanup ("+ownDatabaseFiles.size()+" database files, max. "+MAX_KEEP_DATABASE_VERSIONS+") ...");
 		
-		RemoteDatabaseFile firstMergeDatabaseFile = ownDatabaseFiles.get(0);
-		RemoteDatabaseFile lastMergeDatabaseFile = ownDatabaseFiles.get(ownDatabaseFiles.size()-MIN_KEEP_DATABASE_VERSIONS-1);
+		DatabaseRemoteFile firstMergeDatabaseFile = ownDatabaseFiles.get(0);
+		DatabaseRemoteFile lastMergeDatabaseFile = ownDatabaseFiles.get(ownDatabaseFiles.size()-MIN_KEEP_DATABASE_VERSIONS-1);
 		
 		DatabaseVersion firstMergeDatabaseVersion = null;
 		DatabaseVersion lastMergeDatabaseVersion = null;
@@ -336,7 +346,7 @@ public class UpOperation extends Operation {
 				}
 				
 				if (localVersion < lastMergeDatabaseFile.getClientVersion()) {
-					toDeleteDatabaseFiles.add(new DatabaseRemoteFile("db-"+config.getMachineName()+"-"+localVersion)); // TODO [low] Do this differently db-...
+					toDeleteDatabaseFiles.add(new DatabaseRemoteFile(config.getMachineName(), localVersion)); 
 				}
 			}
 		}
@@ -347,7 +357,7 @@ public class UpOperation extends Operation {
 		
 		// Now write merge file
 		File localMergeDatabaseVersionFile = config.getCache().getDatabaseFile("db-"+config.getMachineName()+"-"+lastMergeDatabaseFile.getClientVersion());
-		DatabaseRemoteFile remoteMergeDatabaseVersionFile = new DatabaseRemoteFile(localMergeDatabaseVersionFile.getName());
+		DatabaseRemoteFile remoteMergeDatabaseVersionFile = new DatabaseRemoteFile(config.getMachineName(), lastMergeDatabaseFile.getClientVersion());
 		
 		logger.log(Level.INFO, "   + Writing new merge file (from "+firstMergeDatabaseVersion.getHeader()+", to "+lastMergeDatabaseVersion.getHeader()+") to file "+localMergeDatabaseVersionFile+" ...");
 
