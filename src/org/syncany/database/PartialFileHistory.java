@@ -63,7 +63,7 @@ public class PartialFileHistory {
         return versions.lastEntry().getValue();
     }   
 
-    /* package */ void addFileVersion(FileVersion fileVersion) {
+    /* package */ public void addFileVersion(FileVersion fileVersion) {
         versions.put(fileVersion.getVersion(), fileVersion);        
     }
     

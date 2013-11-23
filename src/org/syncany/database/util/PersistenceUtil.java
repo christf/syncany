@@ -10,6 +10,7 @@ public class PersistenceUtil {
 	static {
 		try {
 			config = new Configuration();
+
 		} catch (Throwable ex) {
 			System.err.println("Initial SessionFactory creation failed." + ex);
 			throw new ExceptionInInitializerError(ex);

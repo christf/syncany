@@ -2,25 +2,28 @@
  
 <!DOCTYPE hibernate-configuration PUBLIC
         "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
-        "http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd">
-   
+        "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+
 <hibernate-configuration>
-    <session-factory>
+	<session-factory>
 
-     <property name="connection.driver_class">org.hsqldb.jdbcDriver</property>
-     <property name="connection.url">jdbc:hsqldb:file:database/localdatabase;shutdown=true;write_delay=false; </property>
-     <property name="connection.username">sa</property>
-     <property name="connection.password"></property>
-     <property name="hibernate.connection.writedelay">false</property>
-     <property name="hibernate.connection.shutdown">true</property>
-	 <property name="dialect">org.hibernate.dialect.HSQLDialect</property>
+		<property name="connection.driver_class">org.hsqldb.jdbc.JDBCDriver</property>
+		<property name="connection.url">jdbc:hsqldb:file:database/localdatabase;</property>
+		<property name="connection.username">sa</property>
+		<property name="connection.password"></property>
 
-     <property name="show_sql">true</property><property name="format_sql">true</property>
-     
-     <property name="hbm2ddl.auto">update</property>
-     
-	 <mapping class="org.syncany.database.persistence.DatabaseVersionEntity"/>
-	 <mapping class="org.syncany.database.persistence.ChunkEntity"/>
+		<property name="connection.writedelay">false</property>
+		<property name="connection.shutdown">true</property>
+		<property name="dialect">org.hibernate.dialect.HSQLDialect</property>
 
-    </session-factory>
+		<property name="show_sql">true</property>
+		<property name="format_sql">true</property>
+
+		<property name="hbm2ddl.auto">update</property>
+
+		<mapping class="org.syncany.database.persistence.DatabaseVersionEntity" />
+		<mapping class="org.syncany.database.persistence.ChunkEntity" />
+		<mapping class="org.syncany.database.persistence.MultiChunkEntity" />
+
+	</session-factory>
 </hibernate-configuration>

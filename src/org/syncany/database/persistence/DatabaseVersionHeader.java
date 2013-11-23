@@ -1,32 +1,39 @@
+/*
+ * Syncany, www.syncany.org
+ * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.syncany.database.persistence;
 
-import java.io.Serializable;
 import java.util.Date;
-
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
 
 import org.syncany.database.VectorClock;
 
-@Embeddable
-public class DatabaseVersionHeaderEntity implements Serializable, IDatabaseVersionHeader {
+public class DatabaseVersionHeader implements IDatabaseVersionHeader{
 
-	private static final long serialVersionUID = 1L;
-	
     // DB Version and versions of other users (= DB basis)
-	@Column(name = "date", nullable = false)
     private Date date;
-	
-	@Column(name = "vectorclock", nullable = false)
-	private VectorClock vectorClock; // vector clock, machine name to database version map
-	
-	@Column(name = "client", nullable = false)
-	private String client;
-        
-    public DatabaseVersionHeaderEntity() {
+    private VectorClock vectorClock; // vector clock, machine name to database version map
+    private String client;
+    private String previousClient;
+    
+    public DatabaseVersionHeader() {
     	this.date = new Date();
     	this.vectorClock = new VectorClock();
     	this.client = "UnknownMachine";
+    	this.previousClient = "";
     }    
 
 	public Date getDate() {
@@ -78,6 +85,14 @@ public class DatabaseVersionHeaderEntity implements Serializable, IDatabaseVersi
 		this.client = client;
 	}
 
+	public String getPreviousClient() {
+		return previousClient;
+	}
+
+	public void setPreviousClient(String previousClient) {
+		this.previousClient = previousClient;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -96,7 +111,7 @@ public class DatabaseVersionHeaderEntity implements Serializable, IDatabaseVersi
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		DatabaseVersionHeaderEntity other = (DatabaseVersionHeaderEntity) obj;
+		DatabaseVersionHeader other = (DatabaseVersionHeader) obj;
 		if (date == null) {
 			if (other.date != null)
 				return false;
@@ -125,7 +140,12 @@ public class DatabaseVersionHeaderEntity implements Serializable, IDatabaseVersi
 		sb.append("/T=");
 		sb.append(date.getTime());
 		
+		if (previousClient != null) {
+			sb.append("/");
+			sb.append(previousClient);
+		}
+		
 		return sb.toString();
 	}
-    
+  
 }

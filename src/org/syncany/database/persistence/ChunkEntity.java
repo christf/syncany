@@ -17,34 +17,51 @@
  */
 package org.syncany.database.persistence;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 
-import org.syncany.util.ByteArray;
+import org.hibernate.CallbackException;
+import org.hibernate.Session;
+import org.hibernate.classic.Lifecycle;
 import org.syncany.util.StringUtil;
 
 
 /**
  *
- * @author pheckel
+ * @author lum
  */
 @Entity
 @Table(name = "ChunkEntity")
-public class ChunkEntity {
+public class ChunkEntity implements Lifecycle, IChunkEntry {
+	
+	@Transient
+	private byte[] checksum;  
 	
 	@Id
-	@Column(name = "checksum")
-    private byte[] checksum;  
+	@Column(name = "checksumEncoded")
+	private String checksumEncoded; 
 	
 	@Column(name = "size")
     private int size;    
 
+	public ChunkEntity() {
+		
+	}
+	
+	public ChunkEntity(byte[] checksum) {
+        this.checksum = checksum;
+        this.checksumEncoded = StringUtil.toHex(checksum);
+	}
+	
     public ChunkEntity(byte[] checksum, int size) {
         this.checksum = checksum;
+        this.checksumEncoded = StringUtil.toHex(checksum);
         this.size = size;
     }    
 
@@ -57,13 +74,32 @@ public class ChunkEntity {
     }   
     
     public byte[] getChecksum() {
+    	if(this.checksum == null) {
+    		this.checksum = StringUtil.fromHex(checksumEncoded);	
+    	}
+    	
         return checksum;
     }
 
     public void setChecksum(byte[] checksum) {
         this.checksum = checksum;
     }
+    
+	/**
+	 * @return the checksumEncoded
+	 */
+	public String getChecksumEncoded() {
+		return checksumEncoded;
+	}
 
+	/**
+	 * @param checksumEncoded the checksumEncoded to set
+	 */
+	public void setChecksumEncoded(String checksumEncoded) {
+		this.checksumEncoded = checksumEncoded;
+		this.checksum = StringUtil.fromHex(checksumEncoded);	
+	}
+	
 	@Override
 	public String toString() {
 		return "ChunkEntry [checksum=" + StringUtil.toHex(checksum) + ", size=" + size + "]";
@@ -92,23 +128,30 @@ public class ChunkEntity {
 		if (size != other.size)
 			return false;
 		return true;
-	}   
-	
-	/**
-	 * Identifies a chunk entry (= chunk checksum)
-	 * TODO [low] Cleanup chunk entry id usage in application. What about a MultiChunkEntryId, FileContentId, ...
-	 */
-	public static class ChunkEntryId extends ByteArray {
-		public ChunkEntryId() {
-			super();
-		}
-
-		public ChunkEntryId(byte[] array, int offset, int length) {
-			super(array, offset, length);
-		}
-
-		public ChunkEntryId(byte[] array) {
-			super(array);
-		}
 	}
+
+	@Override
+	public boolean onSave(Session s) throws CallbackException {
+		this.checksumEncoded = StringUtil.toHex(checksum);
+		return false;
+	}
+
+	@Override
+	public boolean onUpdate(Session s) throws CallbackException {
+		this.checksumEncoded = StringUtil.toHex(checksum);
+		return false;
+	}
+
+	@Override
+	public boolean onDelete(Session s) throws CallbackException {
+		return false;
+	}
+
+	@Override
+	public void onLoad(Session s, Serializable id) {
+		this.checksum = StringUtil.fromHex(checksumEncoded);
+	}
+	
 }
+
+
