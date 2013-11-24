@@ -3,6 +3,7 @@ package org.syncany.tests.database.util;
 import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
@@ -14,7 +15,9 @@ import org.syncany.database.persistence.ChunkEntity;
 import org.syncany.database.persistence.ChunkEntry.ChunkEntryId;
 import org.syncany.database.persistence.DatabaseVersionEntity;
 import org.syncany.database.persistence.DatabaseVersionHeaderEntity;
+import org.syncany.database.persistence.FileContentEntity;
 import org.syncany.database.persistence.IChunkEntry;
+import org.syncany.database.persistence.IFileContent;
 import org.syncany.database.persistence.IMultiChunkEntry;
 import org.syncany.database.persistence.MultiChunkEntity;
 import org.syncany.tests.util.TestFileUtil;
@@ -42,11 +45,14 @@ public class HibernateTest {
 
 		List<ChunkEntity> chunks = new ArrayList<ChunkEntity>();
 		MultiChunkEntity multiChunk = new MultiChunkEntity(TestFileUtil.createRandomArray(10));
+		FileContentEntity fileContent = new FileContentEntity(TestFileUtil.createRandomArray(rand.nextInt(100)), 512);
+		
 		//Generate Chunks
 		for(int i = 0; i < 20; i++) {
 			ChunkEntity chunk = new ChunkEntity(TestFileUtil.createRandomArray(rand.nextInt(100) ), 512);
 			chunks.add(chunk);
 			
+			fileContent.addChunk(chunk);
 			databaseVersion.addChunk(chunk);
 			multiChunk.addChunk(chunk);
 			if(i % 9 == 0) {
@@ -55,28 +61,52 @@ public class HibernateTest {
 			}
 		}
 		databaseVersion.addMultiChunk(multiChunk);
-
+		databaseVersion.addFileContent(fileContent);
+		
 		databaseVersion = dao.save(databaseVersion);
 		Thread.sleep(5000);
 		DatabaseVersionEntity persisted = dao.get((DatabaseVersionHeaderEntity)databaseVersion.getHeader());
 	
 		assertEquals(databaseVersion, persisted);
 		
+		assertEquals(databaseVersion.getChunks().size(), persisted.getChunks().size());
+		
+		assertEquals(databaseVersion.getMultiChunks().size(), persisted.getMultiChunks().size());
+		
+		assertEquals(databaseVersion.getFileContents().size(), persisted.getFileContents().size());
+		checkChunkOrderInFileContent(chunks, persisted);
+			
 		List<DatabaseVersionEntity> entities = dao.getAll();
 		
 		for (DatabaseVersionEntity databaseVersionEntity : entities) {
 			System.out.println("Header : " + databaseVersionEntity.getHeader());
 			for(IChunkEntry chunk : databaseVersionEntity.getChunks()) {
-				System.out.println("Chunk : " + StringUtil.toHex(chunk.getChecksum()));
+				System.out.println("	Chunk : " + StringUtil.toHex(chunk.getChecksum()));
 			}
 			
 			System.out.println("MultiChunks");
 			for (IMultiChunkEntry multiChunkEntry : databaseVersionEntity.getMultiChunks()) {
-				System.out.println("MultiChunk: " + multiChunkEntry.getId());
+				System.out.println("MultiChunk: " + StringUtil.toHex(multiChunkEntry.getId()));
 				for (ChunkEntryId chunkId : multiChunkEntry.getChunks()) {
-					System.out.println("ChunkId: " +  StringUtil.toHex(chunkId.getArray()));
+					System.out.println("	ChunkId: " +  StringUtil.toHex(chunkId.getArray()));
 				}
 			}
+			System.out.println("FileContents");
+			for (IFileContent filecontent : databaseVersionEntity.getFileContents()) {
+				System.out.println("FileContent: " + StringUtil.toHex(filecontent.getChecksum()));
+				for (ChunkEntryId chunkId : filecontent.getChunks()) {
+					System.out.println("	ChunkId: " +  StringUtil.toHex(chunkId.getArray()));
+				}
+			}
+		}
+	}
+
+	private void checkChunkOrderInFileContent(List<ChunkEntity> chunks, DatabaseVersionEntity persisted) {
+		Collection<IFileContent> persistedFileContents = persisted.getFileContents();
+		Collection<ChunkEntryId> persistedContentChunks = persistedFileContents.iterator().next().getChunks();
+		for (int i = 0; i < persistedFileContents.size(); i++) {
+			ChunkEntryId persistedChunk = persistedContentChunks.iterator().next();
+			assertEquals(StringUtil.toHex(chunks.get(i).getChecksum()), StringUtil.toHex(persistedChunk.getArray()));
 		}
 	}
 

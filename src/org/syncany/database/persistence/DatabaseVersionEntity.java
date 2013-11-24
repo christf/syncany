@@ -10,11 +10,11 @@ import java.util.Map;
 import javax.persistence.CascadeType;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
-import org.syncany.database.FileContent;
+import org.hibernate.annotations.LazyCollection;
+import org.hibernate.annotations.LazyCollectionOption;
 import org.syncany.database.FileVersion;
 import org.syncany.database.PartialFileHistory;
 import org.syncany.database.VectorClock;
@@ -30,15 +30,22 @@ public class DatabaseVersionEntity implements IDatabaseVersion {
     @EmbeddedId
     private DatabaseVersionHeaderEntity header;
     
-    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToMany(cascade = CascadeType.ALL)
+    @LazyCollection(LazyCollectionOption.FALSE)
     private Map<String, ChunkEntity> chunks;
     
-    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OneToMany(cascade = CascadeType.ALL)
+    @LazyCollection(LazyCollectionOption.FALSE)
     private Map<String, MultiChunkEntity> multiChunks;
      
+    @OneToMany(cascade = CascadeType.ALL)
+    @LazyCollection(LazyCollectionOption.FALSE)
+    private Map<String, FileContentEntity> fileContents;
+    
 	public DatabaseVersionEntity() {
 		chunks = new HashMap<String, ChunkEntity>();
 		multiChunks = new HashMap<String, MultiChunkEntity>();
+		fileContents = new HashMap<String, FileContentEntity>();
 	}
 
 	/**
@@ -158,8 +165,7 @@ public class DatabaseVersionEntity implements IDatabaseVersion {
 
 	@Override
 	public IMultiChunkEntry getMultiChunk(ChunkEntryId chunk) {
-		// TODO Auto-generated method stub
-		return null;
+		return multiChunks.get(StringUtil.toHex(chunk.getArray()));
 	}
 
 	@Override
@@ -169,21 +175,23 @@ public class DatabaseVersionEntity implements IDatabaseVersion {
 	}
 
 	@Override
-	public FileContent getFileContent(byte[] checksum) {
-		// TODO Auto-generated method stub
-		return null;
+	public IFileContent getFileContent(byte[] checksum) {
+		return fileContents.get(StringUtil.toHex(checksum));
 	}
 
 	@Override
-	public void addFileContent(FileContent content) {
-		// TODO Auto-generated method stub
-		
+	public void addFileContent(IFileContent content) {
+		if(content instanceof FileContentEntity) {
+			fileContents.put(StringUtil.toHex(content.getChecksum()), (FileContentEntity) content);
+		} else {
+			throw new RuntimeException("Invalid subclass for multichunk");
+		}	
 	}
 
 	@Override
-	public Collection<FileContent> getFileContents() {
-		// TODO Auto-generated method stub
-		return null;
+	public Collection<IFileContent> getFileContents() {
+		Collection<? extends IFileContent> fileContentEntries = fileContents.values();
+		return Collections.unmodifiableCollection(fileContentEntries);
 	}
 
 	@Override

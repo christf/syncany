@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.syncany.database.FileContent;
 import org.syncany.database.FileVersion;
 import org.syncany.database.PartialFileHistory;
 import org.syncany.database.VectorClock;
@@ -37,7 +36,7 @@ public class DatabaseVersion implements IDatabaseVersion {
     // Full DB in RAM
     private Map<ByteArray, IChunkEntry> chunks;
     private Map<ByteArray, IMultiChunkEntry> multiChunks;
-    private Map<ByteArray, FileContent> fileContents;
+    private Map<ByteArray, IFileContent> fileContents;
     private Map<Long, PartialFileHistory> fileHistories;
 
     // Quick access cache
@@ -49,7 +48,7 @@ public class DatabaseVersion implements IDatabaseVersion {
         // Full DB in RAM
         chunks = new HashMap<ByteArray, IChunkEntry>();
         multiChunks = new HashMap<ByteArray, IMultiChunkEntry>();
-        fileContents = new HashMap<ByteArray, FileContent>();
+        fileContents = new HashMap<ByteArray, IFileContent>();
         fileHistories = new HashMap<Long, PartialFileHistory>();          
 
         // Quick access cache
@@ -143,16 +142,17 @@ public class DatabaseVersion implements IDatabaseVersion {
 	
 	// Content
 
-	public FileContent getFileContent(byte[] checksum) {
+	public IFileContent getFileContent(byte[] checksum) {
 		return fileContents.get(new ByteArray(checksum));
 	}
 
-	public void addFileContent(FileContent content) {
+	public void addFileContent(IFileContent content) {
 		fileContents.put(new ByteArray(content.getChecksum()), content);
 	}
 
-	public Collection<FileContent> getFileContents() {
-		return fileContents.values();
+	public Collection<IFileContent> getFileContents() {
+		Collection<? extends IFileContent> fileContentEntries = fileContents.values();
+		return Collections.unmodifiableCollection(fileContentEntries);
 	}
 	
     // History

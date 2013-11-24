@@ -21,7 +21,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
-import org.syncany.database.FileContent;
 import org.syncany.database.FileVersion;
 import org.syncany.database.PartialFileHistory;
 import org.syncany.database.VectorClock;
@@ -61,11 +60,11 @@ public interface IDatabaseVersion {
     
     public Collection<IMultiChunkEntry> getMultiChunks();
     
-	public FileContent getFileContent(byte[] checksum);
+	public IFileContent getFileContent(byte[] checksum);
 
-	public void addFileContent(FileContent content);
+	public void addFileContent(IFileContent content);
 
-	public Collection<FileContent> getFileContents();
+	public Collection<IFileContent> getFileContents();
 	
     public void addFileHistory(PartialFileHistory history);
     
