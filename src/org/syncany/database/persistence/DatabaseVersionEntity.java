@@ -168,7 +168,7 @@ public class DatabaseVersionEntity implements IDatabaseVersion {
 
 	@Override
 	public IMultiChunkEntry getMultiChunk(ChunkEntryId chunk) {
-		return multiChunks.get(StringUtil.toHex(chunk.getArray()));
+		return null;
 	}
 
 	@Override

@@ -30,14 +30,16 @@ public class DAO<T>{
 		return entity;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public T get(Serializable entity) {
 		Session session = PersistenceUtil.getSessionFactory().openSession();
-		@SuppressWarnings("unchecked")
+	
 		T readEntity = (T) session.get(DatabaseVersionEntity.class, entity);
 		session.close();
 		return readEntity;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public T getById(Serializable id) {
 		Session session = PersistenceUtil.getSessionFactory().openSession();
 		
