@@ -24,8 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.syncany.database.FileVersion;
-import org.syncany.database.PartialFileHistory;
 import org.syncany.database.VectorClock;
 import org.syncany.database.persistence.ChunkEntry.ChunkEntryId;
 import org.syncany.util.ByteArray;
@@ -37,7 +35,7 @@ public class DatabaseVersion implements IDatabaseVersion {
     private Map<ByteArray, IChunkEntry> chunks;
     private Map<ByteArray, IMultiChunkEntry> multiChunks;
     private Map<ByteArray, IFileContent> fileContents;
-    private Map<Long, PartialFileHistory> fileHistories;
+    private Map<Long, IPartialFileHistory> fileHistories;
 
     // Quick access cache
     private Map<ChunkEntryId, MultiChunkEntry> chunkMultiChunkCache;    
@@ -49,7 +47,7 @@ public class DatabaseVersion implements IDatabaseVersion {
         chunks = new HashMap<ByteArray, IChunkEntry>();
         multiChunks = new HashMap<ByteArray, IMultiChunkEntry>();
         fileContents = new HashMap<ByteArray, IFileContent>();
-        fileHistories = new HashMap<Long, PartialFileHistory>();          
+        fileHistories = new HashMap<Long, IPartialFileHistory>();          
 
         // Quick access cache
         chunkMultiChunkCache = new HashMap<ChunkEntryId, MultiChunkEntry>();
@@ -157,19 +155,19 @@ public class DatabaseVersion implements IDatabaseVersion {
 	
     // History
     
-    public void addFileHistory(PartialFileHistory history) {
+    public void addFileHistory(IPartialFileHistory history) {
         fileHistories.put(history.getFileId(), history);
     }
     
-    public PartialFileHistory getFileHistory(long fileId) {
+    public IPartialFileHistory getFileHistory(long fileId) {
         return fileHistories.get(fileId);
     }
         
-    public Collection<PartialFileHistory> getFileHistories() {
+    public Collection<IPartialFileHistory> getFileHistories() {
         return fileHistories.values();
     }  
     
-    public void addFileVersionToHistory(long fileHistoryID, FileVersion fileVersion) {
+    public void addFileVersionToHistory(long fileHistoryID, IFileVersion fileVersion) {
     	fileHistories.get(fileHistoryID).addFileVersion(fileVersion);
     }  
     

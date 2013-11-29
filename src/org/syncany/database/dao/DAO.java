@@ -38,16 +38,7 @@ public class DAO<T>{
 		return readEntity;
 	}
 	
-	public T getById(String id) {
-		Session session = PersistenceUtil.getSessionFactory().openSession();
-		
-		T readEntity = (T) session.get(this.type, id);
-		
-		session.close();
-		return readEntity;
-	}
-	
-	public T getById(byte[] id) {
+	public T getById(Serializable id) {
 		Session session = PersistenceUtil.getSessionFactory().openSession();
 		
 		T readEntity = (T) session.get(this.type, id);

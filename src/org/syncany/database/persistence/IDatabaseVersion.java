@@ -21,8 +21,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
-import org.syncany.database.FileVersion;
-import org.syncany.database.PartialFileHistory;
 import org.syncany.database.VectorClock;
 import org.syncany.database.persistence.ChunkEntry.ChunkEntryId;
 
@@ -66,12 +64,12 @@ public interface IDatabaseVersion {
 
 	public Collection<IFileContent> getFileContents();
 	
-    public void addFileHistory(PartialFileHistory history);
+    public void addFileHistory(IPartialFileHistory history);
     
-    public PartialFileHistory getFileHistory(long fileId);
+    public IPartialFileHistory getFileHistory(long fileId);
         
-    public Collection<PartialFileHistory> getFileHistories();
+    public Collection<IPartialFileHistory> getFileHistories();
     
-    public void addFileVersionToHistory(long fileHistoryID, FileVersion fileVersion);
+    public void addFileVersionToHistory(long fileHistoryID, IFileVersion fileVersion);
  
 }

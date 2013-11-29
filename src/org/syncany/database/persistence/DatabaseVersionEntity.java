@@ -15,8 +15,6 @@ import javax.persistence.Table;
 
 import org.hibernate.annotations.LazyCollection;
 import org.hibernate.annotations.LazyCollectionOption;
-import org.syncany.database.FileVersion;
-import org.syncany.database.PartialFileHistory;
 import org.syncany.database.VectorClock;
 import org.syncany.database.persistence.ChunkEntry.ChunkEntryId;
 import org.syncany.util.StringUtil;
@@ -42,10 +40,15 @@ public class DatabaseVersionEntity implements IDatabaseVersion {
     @LazyCollection(LazyCollectionOption.FALSE)
     private Map<String, FileContentEntity> fileContents;
     
+    @OneToMany(cascade = CascadeType.ALL)
+    @LazyCollection(LazyCollectionOption.FALSE)
+    private Map<Long, PartialFileHistoryEntity> fileHistories;
+    
 	public DatabaseVersionEntity() {
 		chunks = new HashMap<String, ChunkEntity>();
 		multiChunks = new HashMap<String, MultiChunkEntity>();
 		fileContents = new HashMap<String, FileContentEntity>();
+		fileHistories = new HashMap<Long, PartialFileHistoryEntity>();
 	}
 
 	/**
@@ -195,32 +198,33 @@ public class DatabaseVersionEntity implements IDatabaseVersion {
 	}
 
 	@Override
-	public void addFileHistory(PartialFileHistory history) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public PartialFileHistory getFileHistory(long fileId) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Collection<PartialFileHistory> getFileHistories() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public void addFileVersionToHistory(long fileHistoryID, FileVersion fileVersion) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
 	public IDatabaseVersionHeader getHeader() {
 		return header;
+	}
+
+	@Override
+	public void addFileHistory(IPartialFileHistory history) {
+		if(history instanceof PartialFileHistoryEntity) {
+			fileHistories.put(history.getFileId(), (PartialFileHistoryEntity)history);     
+		} else {
+			throw new RuntimeException("Invalid subclass for file version. Implement mapping to Entity.");
+		}
+	}
+
+	@Override
+	public IPartialFileHistory getFileHistory(long fileId) {
+		return fileHistories.get(fileId);
+	}
+
+	@Override
+	public Collection<IPartialFileHistory> getFileHistories() {
+		Collection<? extends IPartialFileHistory> fileHistories = this.fileHistories.values();
+        return Collections.unmodifiableCollection(fileHistories);
+	}
+
+	@Override
+	public void addFileVersionToHistory(long fileHistoryID, IFileVersion fileVersion) {
+    	fileHistories.get(fileHistoryID).addFileVersion(fileVersion);
 	}
 	
 }

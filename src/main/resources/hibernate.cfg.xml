@@ -25,5 +25,7 @@
 		<mapping class="org.syncany.database.persistence.ChunkEntity" />
 		<mapping class="org.syncany.database.persistence.MultiChunkEntity" />
 		<mapping class="org.syncany.database.persistence.FileContentEntity" />
+		<mapping class="org.syncany.database.persistence.FileVersionEntity" />
+		<mapping class="org.syncany.database.persistence.PartialFileHistoryEntity" />
 	</session-factory>
 </hibernate-configuration>
