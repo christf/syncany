@@ -43,8 +43,14 @@ import org.syncany.database.FileVersionComparator;
 import org.syncany.database.FileVersionComparator.FileProperties;
 import org.syncany.database.MultiChunkEntry;
 import org.syncany.database.PartialFileHistory;
+import org.syncany.database.persistence.IChunkEntry;
+import org.syncany.database.persistence.IDatabaseVersion;
+import org.syncany.database.persistence.IFileContent;
+import org.syncany.database.persistence.IFileVersion;
 import org.syncany.database.persistence.IFileVersion.FileStatus;
 import org.syncany.database.persistence.IFileVersion.FileType;
+import org.syncany.database.persistence.IMultiChunkEntry;
+import org.syncany.database.persistence.IPartialFileHistory;
 import org.syncany.util.FileUtil;
 import org.syncany.util.StringUtil;
 
@@ -113,19 +119,19 @@ public class Indexer {
 	
 	private void addDirtyChunkData(DatabaseVersion newDatabaseVersion) {
 		logger.log(Level.INFO, "- Adding dirty chunks/multichunks/file contents (from dirty database) ...");
-		for (DatabaseVersion dirtyDatabaseVersion : dirtyDatabase.getDatabaseVersions()) {
+		for (IDatabaseVersion dirtyDatabaseVersion : dirtyDatabase.getDatabaseVersions()) {
 			logger.log(Level.FINER, "   + Adding "+dirtyDatabaseVersion.getChunks().size()+" chunks ...");
-			for (ChunkEntry dirtyChunk : dirtyDatabaseVersion.getChunks()) {
+			for (IChunkEntry dirtyChunk : dirtyDatabaseVersion.getChunks()) {
 				newDatabaseVersion.addChunk(dirtyChunk);
 			}
 			
 			logger.log(Level.FINER, "   + Adding "+dirtyDatabaseVersion.getMultiChunks().size()+" multichunks ...");
-			for (MultiChunkEntry dirtyMultiChunk : dirtyDatabaseVersion.getMultiChunks()) {
+			for (IMultiChunkEntry dirtyMultiChunk : dirtyDatabaseVersion.getMultiChunks()) {
 				newDatabaseVersion.addMultiChunk(dirtyMultiChunk);
 			}
 			
 			logger.log(Level.FINER, "   + Adding "+dirtyDatabaseVersion.getFileContents().size()+" file contents ...");
-			for (FileContent dirtyFileContent : dirtyDatabaseVersion.getFileContents()) {
+			for (IFileContent dirtyFileContent : dirtyDatabaseVersion.getFileContents()) {
 				newDatabaseVersion.addFileContent(dirtyFileContent);
 			}
 		}
@@ -134,14 +140,14 @@ public class Indexer {
 	private void removeDeletedFiles(DatabaseVersion newDatabaseVersion) {
 		logger.log(Level.FINER, "- Looking for deleted files ...");		
 
-		for (PartialFileHistory fileHistory : database.getFileHistories()) {
+		for (IPartialFileHistory fileHistory : database.getFileHistories()) {
 			// Ignore this file history if it has been updated in this database version before (file probably renamed!)
 			if (newDatabaseVersion.getFileHistory(fileHistory.getFileId()) != null) {
 				continue;
 			}
 						
 			// Check if file exists, remove if it doesn't
-			FileVersion lastLocalVersion = fileHistory.getLastVersion();
+			IFileVersion lastLocalVersion = fileHistory.getLastVersion();
 			File lastLocalVersionOnDisk = new File(config.getLocalDir()+File.separator+lastLocalVersion.getPath());
 			
 			// Ignore this file history if the last version is marked "DELETED"
@@ -150,12 +156,12 @@ public class Indexer {
 			}
 			
 			// Add this file history if a new file with this name has been added (file type change)
-			PartialFileHistory newFileWithSameName = getFileHistoryByPathFromDatabaseVersion(newDatabaseVersion, fileHistory.getLastVersion().getPath());
+			IPartialFileHistory newFileWithSameName = getFileHistoryByPathFromDatabaseVersion(newDatabaseVersion, fileHistory.getLastVersion().getPath());
 			
 			// If file has VANISHED, mark as DELETED			
 			if (!FileUtil.exists(lastLocalVersionOnDisk) || newFileWithSameName != null) {
 				PartialFileHistory deletedFileHistory = new PartialFileHistory(fileHistory.getFileId());
-				FileVersion deletedVersion = (FileVersion) lastLocalVersion.clone();
+				IFileVersion deletedVersion = (IFileVersion) lastLocalVersion.clone();
 				deletedVersion.setStatus(FileStatus.DELETED);
 				deletedVersion.setVersion(fileHistory.getLastVersion().getVersion()+1);
 				
@@ -166,10 +172,10 @@ public class Indexer {
 		}				
 	}
 	
-	private PartialFileHistory getFileHistoryByPathFromDatabaseVersion(DatabaseVersion databaseVersion, String path) {
+	private IPartialFileHistory getFileHistoryByPathFromDatabaseVersion(DatabaseVersion databaseVersion, String path) {
 		// TODO [high] Extremely performance intensive, because this is called inside a loop above. Implement better caching for database version!!!
-		for (PartialFileHistory fileHistory : databaseVersion.getFileHistories()) {
-			FileVersion lastVersion = fileHistory.getLastVersion();
+		for (IPartialFileHistory fileHistory : databaseVersion.getFileHistories()) {
+			IFileVersion lastVersion = fileHistory.getLastVersion();
 				
 			if (lastVersion.getStatus() != FileStatus.DELETED && lastVersion.getPath().equals(path)) {
 				return fileHistory;
@@ -189,10 +195,10 @@ public class Indexer {
 	private class IndexerDeduperListener implements DeduperListener {
 		private FileVersionComparator fileVersionHelper;
 		private SecureRandom secureRandom;
-		private DatabaseVersion newDatabaseVersion;
-		private ChunkEntry chunkEntry;		
-		private MultiChunkEntry multiChunkEntry;	
-		private FileContent fileContent;
+		private IDatabaseVersion newDatabaseVersion;
+		private IChunkEntry chunkEntry;		
+		private IMultiChunkEntry multiChunkEntry;	
+		private IFileContent fileContent;
 		
 		private FileProperties startFileProperties;
 		private FileProperties endFileProperties;		
@@ -272,12 +278,12 @@ public class Indexer {
 			}
 			
 			// 1. Determine if file already exists in database 
-			PartialFileHistory lastFileHistory = guessLastFileHistory(fileProperties);						
-			FileVersion lastFileVersion = (lastFileHistory != null) ? lastFileHistory.getLastVersion() : null;
+			IPartialFileHistory lastFileHistory = guessLastFileHistory(fileProperties);						
+			IFileVersion lastFileVersion = (lastFileHistory != null) ? lastFileHistory.getLastVersion() : null;
 			
 			// 2. Add new file version
-			PartialFileHistory fileHistory = null;
-			FileVersion fileVersion = null;			
+			IPartialFileHistory fileHistory = null;
+			IFileVersion fileVersion = null;			
 			
 			if (lastFileVersion == null) {				
 				// TODO [low] move this generation to a better place. Where?
@@ -375,7 +381,7 @@ public class Indexer {
 				fileContent.setChecksum(fileProperties.getChecksum());
 
 				// Check if content already exists, throw gathered content away if it does!
-				FileContent existingContent = database.getContent(fileProperties.getChecksum());
+				IFileContent existingContent = database.getContent(fileProperties.getChecksum());
 				
 				if (existingContent == null) { 
 					newDatabaseVersion.addFileContent(fileContent);
@@ -412,7 +418,7 @@ public class Indexer {
 			endFileProperties = null;
 		}
 
-		private PartialFileHistory guessLastFileHistory(FileProperties fileProperties) {
+		private IPartialFileHistory guessLastFileHistory(FileProperties fileProperties) {
 			if (fileProperties.getType() == FileType.FILE) {
 				return guessLastFileHistoryForFile(fileProperties);
 			} 
@@ -427,23 +433,23 @@ public class Indexer {
 			}
 		}
 		
-		private PartialFileHistory guessLastFileHistoryForSymlink(FileProperties fileProperties) {
+		private IPartialFileHistory guessLastFileHistoryForSymlink(FileProperties fileProperties) {
 			return guessLastFileHistoryForFolderOrSymlink(fileProperties);
 		}
 		
-		private PartialFileHistory guessLastFileHistoryForFolder(FileProperties fileProperties) {
+		private IPartialFileHistory guessLastFileHistoryForFolder(FileProperties fileProperties) {
 			return guessLastFileHistoryForFolderOrSymlink(fileProperties);
 		}
 
-		private PartialFileHistory guessLastFileHistoryForFolderOrSymlink(FileProperties fileProperties) {
-			PartialFileHistory lastFileHistory = database.getFileHistory(fileProperties.getRelativePath());
+		private IPartialFileHistory guessLastFileHistoryForFolderOrSymlink(FileProperties fileProperties) {
+			IPartialFileHistory lastFileHistory = database.getFileHistory(fileProperties.getRelativePath());
 
 			if (lastFileHistory == null) {
 				logger.log(Level.FINER, "   * No old file history found, starting new history (path: "+fileProperties.getRelativePath()+", "+fileProperties.getType()+")");
 				return null;
 			}
 			else {
-				FileVersion lastFileVersion = lastFileHistory.getLastVersion();
+				IFileVersion lastFileVersion = lastFileHistory.getLastVersion();
 				
 				if (lastFileVersion.getStatus() != FileStatus.DELETED && lastFileVersion.getType() == fileProperties.getType()) {
 					logger.log(Level.FINER, "   * Found old file history "+lastFileHistory.getFileId()+" (by path: "+fileProperties.getRelativePath()+"), "+fileProperties.getType()+", appending new version.");
@@ -456,8 +462,8 @@ public class Indexer {
 			}
 		}
 		
-		private PartialFileHistory guessLastFileHistoryForFile(FileProperties fileProperties) {
-			PartialFileHistory lastFileHistory = null;
+		private IPartialFileHistory guessLastFileHistoryForFile(FileProperties fileProperties) {
+			IPartialFileHistory lastFileHistory = null;
 			
 			// 1a. by path
 			lastFileHistory = database.getFileHistory(fileProperties.getRelativePath());
@@ -465,13 +471,13 @@ public class Indexer {
 			if (lastFileHistory == null) {
 				// 1b. by checksum
 				if (fileProperties.getChecksum() != null) {
-					Collection<PartialFileHistory> fileHistoriesWithSameChecksum = database.getFileHistories(fileProperties.getChecksum());
+					Collection<IPartialFileHistory> fileHistoriesWithSameChecksum = database.getFileHistories(fileProperties.getChecksum());
 					
 					if (fileHistoriesWithSameChecksum != null) {
 						// check if they do not exist anymore --> assume it has moved!
 						// TODO [low] choose a more appropriate file history, this takes the first best version with the same checksum
-						for (PartialFileHistory fileHistoryWithSameChecksum : fileHistoriesWithSameChecksum) {
-							FileVersion lastVersion = fileHistoryWithSameChecksum.getLastVersion();
+						for (IPartialFileHistory fileHistoryWithSameChecksum : fileHistoriesWithSameChecksum) {
+							IFileVersion lastVersion = fileHistoryWithSameChecksum.getLastVersion();
 							
 							if (fileProperties.getLastModified() != lastVersion.getLastModified().getTime() || fileProperties.getSize() != lastVersion.getSize()) {
 								continue;

@@ -831,9 +831,9 @@ public class DatabaseReconciliatorTest {
 	}		
 	
 	private class TestResult {
-		DatabaseVersionHeader lastCommonHeader;		
-		TreeMap<String, DatabaseVersionHeader> firstConflictingDatabaseVersionHeaders;
-		TreeMap<String, DatabaseVersionHeader> winningFirstConflictingDatabaseVersionHeaders;
-		Map.Entry<String, DatabaseVersionHeader> winnersWinnersLastDatabaseVersionHeader;	
+		IDatabaseVersionHeader lastCommonHeader;		
+		TreeMap<String, IDatabaseVersionHeader> firstConflictingDatabaseVersionHeaders;
+		TreeMap<String, IDatabaseVersionHeader> winningFirstConflictingDatabaseVersionHeaders;
+		Map.Entry<String, IDatabaseVersionHeader> winnersWinnersLastDatabaseVersionHeader;	
 	}
 }

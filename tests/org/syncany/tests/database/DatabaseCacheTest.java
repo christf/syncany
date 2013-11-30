@@ -29,10 +29,10 @@ import org.syncany.config.Logging;
 import org.syncany.database.ChunkEntry;
 import org.syncany.database.ChunkEntry.ChunkEntryId;
 import org.syncany.database.Database;
-import org.syncany.database.DatabaseVersion;
 import org.syncany.database.FileVersion;
 import org.syncany.database.MultiChunkEntry;
 import org.syncany.database.PartialFileHistory;
+import org.syncany.database.persistence.IDatabaseVersion;
 import org.syncany.database.persistence.IFileVersion.FileStatus;
 import org.syncany.database.persistence.IFileVersion.FileType;
 import org.syncany.tests.util.TestDatabaseUtil;
@@ -47,7 +47,7 @@ public class DatabaseCacheTest {
 		Database database = new Database();
 
 		// Round 1: Add chunk to new database version, then add database version
-		DatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
+		IDatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
         
 		ChunkEntry chunkA1 = new ChunkEntry(new byte[] { 1,2,3,4,5,7,8,9,0 }, 12);
         databaseVersion1.addChunk(chunkA1);
@@ -56,7 +56,7 @@ public class DatabaseCacheTest {
         assertEquals(chunkA1, database.getChunk(new byte[] { 1,2,3,4,5,7,8,9,0 }));
 
 		// Round 2: Add chunk to new database version, then add database version
-		DatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
+        IDatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
 
 		ChunkEntry chunkA2 = new ChunkEntry(new byte[] { 9,8,7,6,5,4,3,2,1 }, 112);        
         databaseVersion2.addChunk(chunkA2);
@@ -66,7 +66,7 @@ public class DatabaseCacheTest {
         assertEquals(chunkA2, database.getChunk(new byte[] { 9,8,7,6,5,4,3,2,1 }));        
         
         // Round 3: Add chunk to new database version, then add database version
-		DatabaseVersion databaseVersion3 = TestDatabaseUtil.createDatabaseVersion(databaseVersion2);		
+        IDatabaseVersion databaseVersion3 = TestDatabaseUtil.createDatabaseVersion(databaseVersion2);		
 		
 		ChunkEntry chunkA3 = new ChunkEntry(new byte[] { 1,1,1,1,1,1,1,1,1 }, 192);        
         databaseVersion3.addChunk(chunkA3);
@@ -82,7 +82,7 @@ public class DatabaseCacheTest {
 		Database database = new Database();
 
 		// Round 1: Add chunk to multichunk
-		DatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
+		IDatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
         
 		MultiChunkEntry multiChunkP1 = new MultiChunkEntry(new byte[] { 8,8,8,8,8,8,8,8 });
 		ChunkEntry chunkA1 = new ChunkEntry(new byte[] { 1,2,3,4,5,7,8,9,0 }, 12);
@@ -97,7 +97,7 @@ public class DatabaseCacheTest {
         assertEquals(multiChunkP1, database.getMultiChunk(new byte[] { 8,8,8,8,8,8,8,8 }));
 
 		// Round 2: Add chunk to multichunk
-		DatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
+        IDatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
         
 		MultiChunkEntry multiChunkP2 = new MultiChunkEntry(new byte[] { 7,7,7,7,7,7,7,7,7 });		
 		MultiChunkEntry multiChunkP3 = new MultiChunkEntry(new byte[] { 5,5,5,5,5,5,5,5,5 });
@@ -135,7 +135,7 @@ public class DatabaseCacheTest {
 		Database database = new Database();
 
 		// Round 1: Add file history & version 
-		DatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
+		IDatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
         
 		FileVersion fileVersion1 = TestDatabaseUtil.createFileVersion("file1.jpg");		
 		PartialFileHistory fileHistory1 = new PartialFileHistory(11111111111111111L);		
@@ -148,7 +148,7 @@ public class DatabaseCacheTest {
         assertEquals(fileHistory1, database.getFileHistory("file1.jpg"));
         
         // Round 2: Add new version
-        DatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
+        IDatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
         
 		FileVersion fileVersion2 = TestDatabaseUtil.createFileVersion("file2.jpg", fileVersion1);		
 		PartialFileHistory fileHistory2 = new PartialFileHistory(11111111111111111L); // same ID		
@@ -163,7 +163,7 @@ public class DatabaseCacheTest {
         assertNull(database.getFileHistory("file1.jpg"));
         
         // Round 3: Add deleted version
-        DatabaseVersion databaseVersion3 = TestDatabaseUtil.createDatabaseVersion(databaseVersion2);		
+        IDatabaseVersion databaseVersion3 = TestDatabaseUtil.createDatabaseVersion(databaseVersion2);		
         
 		FileVersion fileVersion3 = TestDatabaseUtil.createFileVersion("file2.jpg", fileVersion2);
 		fileVersion3.setStatus(FileStatus.DELETED);
@@ -183,7 +183,7 @@ public class DatabaseCacheTest {
 		Database database = new Database();
 
 		// Round 1: Add file history & version 
-		DatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
+		IDatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
         
 		FileVersion fileVersion1 = TestDatabaseUtil.createFileVersion("file1.jpg");		
 		PartialFileHistory fileHistory1 = new PartialFileHistory(11111111111111111L);		
@@ -196,7 +196,7 @@ public class DatabaseCacheTest {
         assertEquals(fileHistory1, database.getFileHistory("file1.jpg"));
         
         // Round 2: Add new version
-        DatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
+        IDatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
         
         // - delete file1.jpg
 		FileVersion fileVersion2 = TestDatabaseUtil.createFileVersion("file1.jpg", fileVersion1);
@@ -229,7 +229,7 @@ public class DatabaseCacheTest {
 		Database database = new Database();
 
 		// Round 1: Add file history & version 
-		DatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
+		IDatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
         
 		// - history 1, version 1
 		FileVersion fileVersion1 = TestDatabaseUtil.createFileVersion("samechecksum1.jpg");
@@ -246,7 +246,7 @@ public class DatabaseCacheTest {
         assertEquals(1, database.getFileHistories(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 }).size());
         
         // Round 2: Add two other versions with same checksum to new database version
-        DatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
+        IDatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
         
         // - history 1, version 2
         FileVersion fileVersion11 = TestDatabaseUtil.createFileVersion("samechecksum2-renamed.jpg", fileVersion1);
@@ -287,7 +287,7 @@ public class DatabaseCacheTest {
 		Database database = new Database();
 
 		// Round 1: Add file history & version 
-		DatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
+		IDatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
         
 		// - history 1, version 1
 		FileVersion fileVersion1 = TestDatabaseUtil.createFileVersion("samechecksum1.jpg");
@@ -304,7 +304,7 @@ public class DatabaseCacheTest {
 		assertEquals(fileHistory1, database.getFileHistory(11111111111111111L));
 		
 		// Round 2: Add two other versions with same checksum to new database version
-        DatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
+		IDatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
         
         // - history 1, version 2
         FileVersion fileVersion11 = TestDatabaseUtil.createFileVersion("samechecksum2-renamed.jpg", fileVersion1);

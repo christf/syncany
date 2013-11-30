@@ -88,7 +88,7 @@ public class WatchOperation extends Operation implements NotificationListenerLis
 
 	@Override
 	public WatchOperationResult execute() throws Exception {
-		database = loadLocalDatabase();
+		database = loadLocalDatabaseFromSQL();
 
 		if (options.announcementsEnabled()) {
 			startNotificationListener();

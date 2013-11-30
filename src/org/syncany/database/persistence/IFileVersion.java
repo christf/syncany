@@ -86,6 +86,8 @@ public interface IFileVersion extends Cloneable {
 
 	public void setDosAttributes(String dosAttributes);
 
+	public IFileVersion clone();
+	
 	public enum FileStatus {
 		NEW ("NEW"), 
 		CHANGED ("CHANGED"), 

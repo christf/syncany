@@ -60,7 +60,7 @@ public class LsRemoteOperation extends Operation {
 		logger.log(Level.INFO, "Running 'Remote Status' at client "+config.getMachineName()+" ...");
 		logger.log(Level.INFO, "--------------------------------------------");
 		
-		Database database = (loadedDatabase != null) ? loadedDatabase : loadLocalDatabase();		
+		Database database = (loadedDatabase != null) ? loadedDatabase : loadLocalDatabaseFromSQL();		
 		
 		TransferManager transferManager = (loadedTransferManager != null)
 				? loadedTransferManager

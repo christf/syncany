@@ -33,6 +33,8 @@ import org.syncany.database.DatabaseVersionHeader;
 import org.syncany.database.FileVersion;
 import org.syncany.database.VectorClock;
 import org.syncany.database.XmlDatabaseDAO;
+import org.syncany.database.persistence.IDatabaseVersion;
+import org.syncany.database.persistence.IDatabaseVersionHeader;
 import org.syncany.database.persistence.IFileVersion.FileStatus;
 import org.syncany.database.persistence.IFileVersion.FileType;
 
@@ -80,8 +82,8 @@ public class TestDatabaseUtil {
 		return newDatabaseVersionHeader;
 	}
 	
-	public static TreeMap<String, DatabaseVersionHeader> createMapWithMachineKey(String[] keysAndDatabaseVersionHeaderStrings) throws Exception {
-		TreeMap<String, DatabaseVersionHeader> databaseVersionHeaderMap = new TreeMap<String, DatabaseVersionHeader>();
+	public static TreeMap<String, IDatabaseVersionHeader> createMapWithMachineKey(String[] keysAndDatabaseVersionHeaderStrings) throws Exception {
+		TreeMap<String, IDatabaseVersionHeader> databaseVersionHeaderMap = new TreeMap<String, IDatabaseVersionHeader>();
 		
 		for (int i=0; i<keysAndDatabaseVersionHeaderStrings.length; i+=2) {			
 			String machineName = keysAndDatabaseVersionHeaderStrings[i];
@@ -146,19 +148,19 @@ public class TestDatabaseUtil {
 	// TODO [medium] Add functionality tests for the rest of the cache
 	// TODO [high] Add performance tests for the cache and optimize Database.addDatabaseVersion()-cache handling
 	
-	public static DatabaseVersion createDatabaseVersion() {
+	public static IDatabaseVersion createDatabaseVersion() {
 		return createDatabaseVersion(null, new Date());
 	}
 	
-	public static DatabaseVersion createDatabaseVersion(DatabaseVersion basedOnDatabaseVersion) {
+	public static IDatabaseVersion createDatabaseVersion(IDatabaseVersion basedOnDatabaseVersion) {
 		return createDatabaseVersion(basedOnDatabaseVersion, new Date());
 	}
 	
-	public static DatabaseVersion createDatabaseVersion(Date date) {
+	public static IDatabaseVersion createDatabaseVersion(Date date) {
 		return createDatabaseVersion(null, date);
 	}
 	
-	public static DatabaseVersion createDatabaseVersion(DatabaseVersion basedOnDatabaseVersion, Date date) {
+	public static IDatabaseVersion createDatabaseVersion(IDatabaseVersion basedOnDatabaseVersion, Date date) {
 		VectorClock vectorClock = (basedOnDatabaseVersion != null) ? basedOnDatabaseVersion.getVectorClock().clone() : new VectorClock();
 		vectorClock.incrementClock("someclient");
 		

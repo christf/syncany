@@ -106,7 +106,7 @@ public class UpOperation extends Operation {
 		logger.log(Level.INFO, "--------------------------------------------");
 		
 		// Load database
-		Database database = (loadedDatabase != null) ? loadedDatabase : loadLocalDatabase();
+		Database database = (loadedDatabase != null) ? loadedDatabase : loadLocalDatabaseFromSQL();
 		
 		// Load dirty database (if existent) 
 		if (config.getDirtyDatabaseFile().exists()) {
@@ -189,7 +189,7 @@ public class UpOperation extends Operation {
 			}
 			
 			logger.log(Level.INFO, "Saving local database to file "+config.getDatabaseFile()+" ...");  
-			saveLocalDatabase(database, config.getDatabaseFile());
+			saveLocalDatabaseToSQL(database);
 			
 			logger.log(Level.INFO, "Sync up done.");
 		}

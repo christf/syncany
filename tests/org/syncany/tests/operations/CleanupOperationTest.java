@@ -28,7 +28,6 @@ import java.util.TimeZone;
 import org.junit.Test;
 import org.syncany.config.Config;
 import org.syncany.database.Database;
-import org.syncany.database.DatabaseVersion;
 import org.syncany.database.persistence.IDatabaseVersion;
 import org.syncany.operations.CleanupOperation;
 import org.syncany.operations.CleanupOperation.CleanupOperationOptions;
@@ -46,8 +45,8 @@ public class CleanupOperationTest {
 
 		Database database = new Database();
 
-		List<DatabaseVersion> olderDatabaseVersions = createConsistentDatabaseVersions(5, 5, -40, null);
-		List<DatabaseVersion> newerDatabaseVersions = createConsistentDatabaseVersions(5, 5, 40, olderDatabaseVersions.get(olderDatabaseVersions.size()-1));
+		List<IDatabaseVersion> olderDatabaseVersions = createConsistentDatabaseVersions(5, 5, -40, null);
+		List<IDatabaseVersion> newerDatabaseVersions = createConsistentDatabaseVersions(5, 5, 40, olderDatabaseVersions.get(olderDatabaseVersions.size()-1));
 
 		database.addDatabaseVersions(olderDatabaseVersions);
 		database.addDatabaseVersions(newerDatabaseVersions);
@@ -61,9 +60,9 @@ public class CleanupOperationTest {
 		assertEquals(identifiedDatabaseVersions, olderDatabaseVersions);
 	}
 	
-	private List<DatabaseVersion> createConsistentDatabaseVersions(int amount, int minuteOffset, int dayOffset, DatabaseVersion basedOn) {
-		List<DatabaseVersion> databaseVersions = new ArrayList<DatabaseVersion>();
-		DatabaseVersion dbv = basedOn;
+	private List<IDatabaseVersion> createConsistentDatabaseVersions(int amount, int minuteOffset, int dayOffset, IDatabaseVersion basedOn) {
+		List<IDatabaseVersion> databaseVersions = new ArrayList<IDatabaseVersion>();
+		IDatabaseVersion dbv = basedOn;
 		calendar.add(Calendar.DATE, dayOffset);  			
 		for(int i=0; i < amount; i++) {
 			calendar.add(Calendar.MINUTE, minuteOffset);  

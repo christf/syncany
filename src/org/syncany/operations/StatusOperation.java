@@ -31,10 +31,8 @@ import java.util.logging.Logger;
 
 import org.syncany.config.Config;
 import org.syncany.database.Database;
-import org.syncany.database.FileVersion;
 import org.syncany.database.FileVersionComparator;
 import org.syncany.database.FileVersionComparator.FileVersionComparison;
-import org.syncany.database.PartialFileHistory;
 import org.syncany.database.persistence.IFileVersion;
 import org.syncany.database.persistence.IFileVersion.FileStatus;
 import org.syncany.database.persistence.IPartialFileHistory;
@@ -74,7 +72,7 @@ public class StatusOperation extends Operation {
 			logger.log(Level.INFO, "Force checksum ENABLED.");
 		}
 		
-		Database database = (loadedDatabase != null) ? loadedDatabase : loadLocalDatabase();		
+		Database database = (loadedDatabase != null) ? loadedDatabase : loadLocalDatabaseFromSQL();		
 		
 		logger.log(Level.INFO, "Analyzing local folder "+config.getLocalDir()+" ...");				
 		ChangeSet changeSet = findChangedAndNewFiles(config.getLocalDir(), database);
@@ -161,7 +159,7 @@ public class StatusOperation extends Operation {
 			}				
 			
 			// Check database by file path
-			PartialFileHistory expectedFileHistory = database.getFileHistory(relativeFilePath);				
+			IPartialFileHistory expectedFileHistory = database.getFileHistory(relativeFilePath);				
 			
 			if (expectedFileHistory != null) {
 				IFileVersion expectedLastFileVersion = expectedFileHistory.getLastVersion();

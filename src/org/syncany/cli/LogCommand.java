@@ -32,8 +32,8 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
-import org.syncany.database.PartialFileHistory;
 import org.syncany.database.persistence.IFileVersion;
+import org.syncany.database.persistence.IPartialFileHistory;
 import org.syncany.operations.LogOperation;
 import org.syncany.operations.LogOperation.LogOperationOptions;
 import org.syncany.operations.LogOperation.LogOperationResult;
@@ -96,9 +96,9 @@ public class LogCommand extends Command {
 				StringUtil.toHex(fileVersion.getChecksum()));
 	}
 
-	private int longestPath(List<PartialFileHistory> fileHistories, boolean lastOnly) {
+	private int longestPath(List<IPartialFileHistory> fileHistories, boolean lastOnly) {
 		int result = 0;
-		for (PartialFileHistory fileHistory : fileHistories) {
+		for (IPartialFileHistory fileHistory : fileHistories) {
 			if (lastOnly) {
 				result = Math.max(result, fileHistory.getLastVersion().getPath().length());
 			} else {
@@ -115,7 +115,7 @@ public class LogCommand extends Command {
 		if (operationResult.getFormat().equals("last")) {
 			longestPath = longestPath(operationResult.getFileHistories(), true);
 		}
-		for (PartialFileHistory fileHistory : operationResult.getFileHistories()) {
+		for (IPartialFileHistory fileHistory : operationResult.getFileHistories()) {
 			IFileVersion lastVersion = fileHistory.getLastVersion();
 			switch (operationResult.getFormat()) {
 			case "full":

@@ -74,7 +74,7 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 	}
 
 	@Override
-	public void save(Database db, DatabaseVersion versionFrom, DatabaseVersion versionTo, File destinationFile) throws IOException {				 
+	public void save(Database db, IDatabaseVersion versionFrom, IDatabaseVersion versionTo, File destinationFile) throws IOException {				 
 		try {
 			PrintWriter out;
 			

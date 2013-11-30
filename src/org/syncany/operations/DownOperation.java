@@ -48,15 +48,14 @@ import org.syncany.database.Branches;
 import org.syncany.database.ChunkEntry.ChunkEntryId;
 import org.syncany.database.Database;
 import org.syncany.database.DatabaseDAO;
-import org.syncany.database.DatabaseVersion;
 import org.syncany.database.DatabaseVersionHeader;
 import org.syncany.database.FileVersion;
-import org.syncany.database.MultiChunkEntry;
 import org.syncany.database.VectorClock;
 import org.syncany.database.XmlDatabaseDAO;
 import org.syncany.database.persistence.IDatabaseVersion;
 import org.syncany.database.persistence.IDatabaseVersionHeader;
 import org.syncany.database.persistence.IFileContent;
+import org.syncany.database.persistence.IFileVersion;
 import org.syncany.database.persistence.IMultiChunkEntry;
 import org.syncany.operations.actions.FileCreatingFileSystemAction;
 import org.syncany.operations.actions.FileSystemAction;
@@ -199,14 +198,14 @@ public class DownOperation extends Operation {
 			}
 
 			logger.log(Level.INFO, "- Saving local database to " + config.getDatabaseFile() + " ...");
-			saveLocalDatabase(localDatabase, config.getDatabaseFile());
+			saveLocalDatabaseToSQL(localDatabase);
 
 			result.setResultCode(DownResultCode.OK_WITH_REMOTE_CHANGES);
 		}
 	}
 
 	private void initOperationVariables() throws Exception {
-		localDatabase = (localDatabase != null) ? localDatabase : loadLocalDatabase();
+		localDatabase = (localDatabase != null) ? localDatabase : loadLocalDatabaseFromSQL();
 		localBranch = localDatabase.getBranch();
 
 		transferManager = config.getConnection().createTransferManager();
@@ -308,7 +307,7 @@ public class DownOperation extends Operation {
 		return multiChunksToDownload;
 	}
 
-	private Collection<IMultiChunkEntry> determineMultiChunksToDownload(FileVersion fileVersion, Database localDatabase, Database winnersDatabase) {
+	private Collection<IMultiChunkEntry> determineMultiChunksToDownload(IFileVersion fileVersion, Database localDatabase, Database winnersDatabase) {
 		Set<IMultiChunkEntry> multiChunksToDownload = new HashSet<IMultiChunkEntry>();
 
 		IFileContent winningFileContent = localDatabase.getContent(fileVersion.getChecksum());

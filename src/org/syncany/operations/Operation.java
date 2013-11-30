@@ -19,6 +19,7 @@ package org.syncany.operations;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,9 +28,12 @@ import org.syncany.config.Config;
 import org.syncany.database.Database;
 import org.syncany.database.DatabaseDAO;
 import org.syncany.database.DatabaseVersion;
+import org.syncany.database.VectorClock;
+import org.syncany.database.VectorClock.VectorClockComparison;
 import org.syncany.database.XmlDatabaseDAO;
 import org.syncany.database.dao.DAO;
 import org.syncany.database.persistence.DatabaseVersionEntity;
+import org.syncany.database.persistence.IDatabaseVersion;
 
 /**
  * Operations represent and implement Syncany's business logic. They typically
@@ -74,6 +78,67 @@ public abstract class Operation {
 		dao.save(db, fromVersion, toVersion, localDatabaseFile);
 	}		
 	
+	//FIXME move to a butter place; SQL-DatabaseDAO
+	protected void saveLocalDatabaseToSQL(Database db) throws IOException {
+		saveLocalDatabaseToSQL(db, null, null);
+	}	
+	
+	//FIXME move to a butter place
+	protected void saveLocalDatabaseToSQL(Database db, IDatabaseVersion fromVersion, IDatabaseVersion toVersion) throws IOException {
+		DAO<DatabaseVersionEntity> dao = new DAO<DatabaseVersionEntity>(DatabaseVersionEntity.class);
+
+		for (IDatabaseVersion databaseVersion : db.getDatabaseVersions()) {
+			boolean databaseVersionInSaveRange = databaseVersionInRange(databaseVersion, fromVersion, toVersion);
+
+			if (!databaseVersionInSaveRange) {
+				continue;
+			}
+
+			dao.save((DatabaseVersionEntity)databaseVersion);
+		}
+	}
+
+	
+	private boolean databaseVersionInRange(IDatabaseVersion databaseVersion, IDatabaseVersion databaseVersionFrom, IDatabaseVersion databaseVersionTo) {
+		VectorClock vectorClock = databaseVersion.getVectorClock();
+		VectorClock vectorClockRangeFrom = (databaseVersionFrom != null) ? databaseVersionFrom.getVectorClock() : null;
+		VectorClock vectorClockRangeTo = (databaseVersionTo != null) ? databaseVersionTo.getVectorClock() : null;
+		
+		return vectorClockInRange(vectorClock, vectorClockRangeFrom, vectorClockRangeTo);
+	}	
+	
+	private boolean vectorClockInRange(VectorClock vectorClock, VectorClock vectorClockRangeFrom, VectorClock vectorClockRangeTo) {
+		// Determine if: versionFrom < databaseVersion
+		boolean greaterOrEqualToVersionFrom = false;
+
+		if (vectorClockRangeFrom == null) {
+			greaterOrEqualToVersionFrom = true;
+		}
+		else {
+			VectorClockComparison comparison = VectorClock.compare(vectorClockRangeFrom, vectorClock);
+			
+			if (comparison == VectorClockComparison.EQUAL || comparison == VectorClockComparison.SMALLER) {
+				greaterOrEqualToVersionFrom = true;
+			}				
+		}
+		
+		// Determine if: databaseVersion < versionTo
+		boolean lowerOrEqualToVersionTo = false;
+
+		if (vectorClockRangeTo == null) {
+			lowerOrEqualToVersionTo = true;
+		}
+		else {
+			VectorClockComparison comparison = VectorClock.compare(vectorClock, vectorClockRangeTo);
+			
+			if (comparison == VectorClockComparison.EQUAL || comparison == VectorClockComparison.SMALLER) {
+				lowerOrEqualToVersionTo = true;
+			}				
+		}
+
+		return greaterOrEqualToVersionFrom && lowerOrEqualToVersionTo;		
+	}
+	
 	protected Database loadLocalDatabase() throws IOException {
 		return loadLocalDatabase(config.getDatabaseFile());
 	}
@@ -85,7 +150,10 @@ public abstract class Operation {
 		
 		List<DatabaseVersionEntity> databaseVersions = dao.getAll();
 		
-		db.addDatabaseVersions(databaseVersions);
+		List<IDatabaseVersion> databaseVersionsInterims = new ArrayList<IDatabaseVersion>();
+		databaseVersionsInterims.addAll(databaseVersions);
+		
+		db.addDatabaseVersions(databaseVersionsInterims);
 		
 		return db;
 	}

@@ -152,8 +152,8 @@ public class Database {
 		updateContentChecksumCache();
 	} 	
 	
-	public void addDatabaseVersions(List<DatabaseVersion> databaseVersions) {		
-		for (DatabaseVersion databaseVersion : databaseVersions) {
+	public void addDatabaseVersions(List<IDatabaseVersion> databaseVersions) {		
+		for (IDatabaseVersion databaseVersion : databaseVersions) {
 			addDatabaseVersion(databaseVersion);
 		}
 	} 	

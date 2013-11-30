@@ -24,8 +24,8 @@ import java.util.logging.Logger;
 
 import org.syncany.config.Config;
 import org.syncany.database.Database;
-import org.syncany.database.DatabaseVersion;
-import org.syncany.database.PartialFileHistory;
+import org.syncany.database.persistence.IDatabaseVersion;
+import org.syncany.database.persistence.IPartialFileHistory;
 
 public class LogOperation extends Operation {
 	private static final Logger logger = Logger.getLogger(LogOperation.class.getSimpleName());	
@@ -51,17 +51,17 @@ public class LogOperation extends Operation {
 		logger.log(Level.INFO, "Running 'Log' at client "+config.getMachineName()+" ...");
 		logger.log(Level.INFO, "--------------------------------------------");
 		
-		Database database = loadLocalDatabase();		
-		DatabaseVersion currentDatabaseVersion = database.getLastDatabaseVersion();
+		Database database = loadLocalDatabaseFromSQL();		
+		IDatabaseVersion currentDatabaseVersion = database.getLastDatabaseVersion();
 		
 		if (currentDatabaseVersion == null) {
 			throw new Exception("No database versions yet locally. Nothing to show here.");
 		}
 
-		List<PartialFileHistory> fileHistories = null;
+		List<IPartialFileHistory> fileHistories = null;
 		
 		if (options.getPaths().isEmpty()) {
-			fileHistories = new ArrayList<PartialFileHistory>(database.getFileHistories());			
+			fileHistories = new ArrayList<IPartialFileHistory>(database.getFileHistories());			
 		}
 		else {
 			fileHistories = getFileHistoriesByPath(options.getPaths(), database);
@@ -70,11 +70,11 @@ public class LogOperation extends Operation {
 		return new LogOperationResult(fileHistories,options.getFormat());
 	}			
 	
-	private List<PartialFileHistory> getFileHistoriesByPath(List<String> filePaths, Database database) {				
-		List<PartialFileHistory> fileHistories = new ArrayList<PartialFileHistory>();
+	private List<IPartialFileHistory> getFileHistoriesByPath(List<String> filePaths, Database database) {				
+		List<IPartialFileHistory> fileHistories = new ArrayList<IPartialFileHistory>();
 
 		for (String filePath : filePaths) {
-			PartialFileHistory fileHistory = database.getFileHistory(filePath);
+			IPartialFileHistory fileHistory = database.getFileHistory(filePath);
 			
 			if (fileHistory != null) {
 				fileHistories.add(fileHistory);
@@ -112,16 +112,16 @@ public class LogOperation extends Operation {
 	}
 	
 	public class LogOperationResult implements OperationResult {
-		private List<PartialFileHistory> fileHistories;
+		private List<IPartialFileHistory> fileHistories;
 		
 		private String format;
 		
-		public LogOperationResult(List<PartialFileHistory> fileHistories, String format) {
+		public LogOperationResult(List<IPartialFileHistory> fileHistories, String format) {
 			this.fileHistories = fileHistories;
 			this.format =format;
 		}
 
-		public List<PartialFileHistory> getFileHistories() {
+		public List<IPartialFileHistory> getFileHistories() {
 			return fileHistories;
 		}	
 		

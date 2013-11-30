@@ -25,11 +25,9 @@ import java.util.logging.Logger;
 
 import org.syncany.config.Config;
 import org.syncany.database.Database;
-import org.syncany.database.FileVersion;
 import org.syncany.database.FileVersionComparator;
 import org.syncany.database.FileVersionComparator.FileChange;
 import org.syncany.database.FileVersionComparator.FileVersionComparison;
-import org.syncany.database.PartialFileHistory;
 import org.syncany.database.persistence.IFileVersion;
 import org.syncany.database.persistence.IPartialFileHistory;
 import org.syncany.operations.DownOperation.DownOperationResult;

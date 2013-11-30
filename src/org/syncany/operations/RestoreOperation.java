@@ -38,11 +38,11 @@ import org.syncany.connection.plugins.StorageException;
 import org.syncany.connection.plugins.TransferManager;
 import org.syncany.database.ChunkEntry.ChunkEntryId;
 import org.syncany.database.Database;
-import org.syncany.database.PartialFileHistory;
 import org.syncany.database.persistence.IDatabaseVersion;
 import org.syncany.database.persistence.IFileContent;
 import org.syncany.database.persistence.IFileVersion;
 import org.syncany.database.persistence.IMultiChunkEntry;
+import org.syncany.database.persistence.IPartialFileHistory;
 import org.syncany.operations.actions.FileSystemAction;
 import org.syncany.operations.actions.NewFileSystemAction;
 import org.syncany.util.FileUtil;
@@ -114,7 +114,7 @@ public class RestoreOperation extends Operation {
 		List<IFileVersion> restoreFileVersions = new ArrayList<IFileVersion>();
 	
 		for (String filePath : restoreFilePaths) {
-			PartialFileHistory fileHistory = database.getFileHistory(filePath);
+			IPartialFileHistory fileHistory = database.getFileHistory(filePath);
 			
 			if (fileHistory != null) {
 				// Go back <versionNumber> versions
@@ -169,7 +169,7 @@ public class RestoreOperation extends Operation {
 		List<IFileVersion> restoreFileVersions = new ArrayList<IFileVersion>();
 		
 		for (String restoreFilePath : restoreFilePaths) {
-			PartialFileHistory restoreFileHistory = databaseBeforeRestoreTime.getFileHistory(restoreFilePath);
+			IPartialFileHistory restoreFileHistory = databaseBeforeRestoreTime.getFileHistory(restoreFilePath);
 			
 			if (restoreFileHistory != null) {
 				restoreFileVersions.add(restoreFileHistory.getLastVersion());
