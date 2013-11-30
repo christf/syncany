@@ -13,6 +13,7 @@ import org.syncany.database.ChunkEntry.ChunkEntryId;
 import org.syncany.database.VectorClock;
 import org.syncany.database.dao.DAO;
 import org.syncany.database.persistence.ChunkEntity;
+import org.syncany.database.persistence.ChunkIdEntity;
 import org.syncany.database.persistence.DatabaseVersionEntity;
 import org.syncany.database.persistence.DatabaseVersionHeaderEntity;
 import org.syncany.database.persistence.FileContentEntity;
@@ -58,10 +59,10 @@ public class HibernateTest {
 			ChunkEntity chunk = new ChunkEntity(TestFileUtil.createRandomArray(rand.nextInt(100) ), 512);
 			chunks.add(chunk);
 			
-			fileContent.addChunk(chunk);
+			fileContent.addChunk(new ChunkEntryId(chunk.getChecksum()));
 
 			databaseVersion.addChunk(chunk);
-			multiChunk.addChunk(chunk);
+			multiChunk.addChunk(new ChunkEntryId(chunk.getChecksum()));
 			if(i % 9 == 0) {
 				databaseVersion.addMultiChunk(multiChunk);
 				multiChunk = new MultiChunkEntity(TestFileUtil.createRandomArray(10)); 
@@ -87,6 +88,8 @@ public class HibernateTest {
 		Thread.sleep(5000);
 		DatabaseVersionEntity persisted = dao.get((DatabaseVersionHeaderEntity)databaseVersion.getHeader());
 	
+		persisted = dao.save(persisted);
+		
 		assertEquals(databaseVersion, persisted);
 		
 		assertEquals(databaseVersion.getChunks().size(), persisted.getChunks().size());
@@ -170,7 +173,7 @@ public class HibernateTest {
 		MultiChunkEntity multiChunk = new MultiChunkEntity(TestFileUtil.createRandomArray(rand.nextInt(100)));
 		
 		for(int i = 0; i < 1; i++) {
-			multiChunk.addChunk(new ChunkEntity(TestFileUtil.createRandomArray(rand.nextInt(100)), 512));
+			multiChunk.addChunk(new ChunkIdEntity(TestFileUtil.createRandomArray(rand.nextInt(100))));
 		}
 		
 		multiChunk = dao.save(multiChunk);

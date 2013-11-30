@@ -18,64 +18,47 @@
 package org.syncany.database.persistence;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.Id;
-import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.hibernate.CallbackException;
 import org.hibernate.Session;
 import org.hibernate.classic.Lifecycle;
-import org.syncany.database.ChunkEntry.ChunkEntryId;
 import org.syncany.util.StringUtil;
 
+/**
+ * @author lum
+ *
+ */
 @Entity
-@Table(name = "FileContentEntity")
-public class FileContentEntity implements IFileContent, Lifecycle {
-	
+@Table(name = "ChunkIdEntity")
+public class ChunkIdEntity implements Lifecycle{
 	@Transient
-    private byte[] checksum;
+	private byte[] checksum;  
 	
 	@Id
 	@Column(name = "checksumEncoded")
-	private String checksumEncoded;
+	private String checksumEncoded; 
 	
-	@Column(name = "contentSize")
-    private long contentSize;
-    
-    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    private List<ChunkIdEntity> chunks;
-    
-    public FileContentEntity() {
-        this.chunks = new ArrayList<ChunkIdEntity>();
-    }
-    
-    public FileContentEntity(byte[] checksum, long contentSize) {
-        this();
-        this.contentSize = contentSize;
+	public ChunkIdEntity() {
+		
+	}
+	
+	public ChunkIdEntity(byte[] checksum) {
         this.checksum = checksum;
         this.checksumEncoded = StringUtil.toHex(checksum);
-    }
-       
-    public void addChunk(ChunkEntryId chunk) {
-        chunks.add(new ChunkIdEntity(chunk.getArray()));        
-    }    
+	}
     
-    public void addChunk(ChunkIdEntity chunk) {
-    	chunks.add(chunk);
-    }  
-
     public byte[] getChecksum() {
+    	if(this.checksum == null) {
+    		this.checksum = StringUtil.fromHex(checksumEncoded);	
+    	}
+    	
         return checksum;
     }
 
@@ -83,30 +66,32 @@ public class FileContentEntity implements IFileContent, Lifecycle {
         this.checksum = checksum;
         this.checksumEncoded = StringUtil.toHex(checksum);
     }
+    
+	/**
+	 * @return the checksumEncoded
+	 */
+	public String getChecksumEncoded() {
+		return checksumEncoded;
+	}
 
-    public long getSize() {
-        return contentSize;
-    }
-
-    public void setSize(long contentSize) {
-        this.contentSize = contentSize;
-    }
-
-    public Collection<ChunkEntryId> getChunks() {
-    	List<ChunkEntryId> chunkEntryIds = new ArrayList<ChunkEntryId>();
-    	for (ChunkIdEntity chunk : chunks) {
-    		chunkEntryIds.add(new ChunkEntryId(chunk.getChecksum()));
-		}
-        return Collections.unmodifiableCollection(chunkEntryIds);
-    }
-
+	/**
+	 * @param checksumEncoded the checksumEncoded to set
+	 */
+	public void setChecksumEncoded(String checksumEncoded) {
+		this.checksumEncoded = checksumEncoded;
+		this.checksum = StringUtil.fromHex(checksumEncoded);	
+	}
+	
+	@Override
+	public String toString() {
+		return "ChunkEntry [checksum=" + StringUtil.toHex(checksum) + "]";
+	}
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + Arrays.hashCode(checksum);
-		result = prime * result + ((chunks == null) ? 0 : chunks.hashCode());
-		result = prime * result + (int) (contentSize ^ (contentSize >>> 32));
 		return result;
 	}
 
@@ -118,22 +103,10 @@ public class FileContentEntity implements IFileContent, Lifecycle {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		FileContentEntity other = (FileContentEntity) obj;
+		ChunkIdEntity other = (ChunkIdEntity) obj;
 		if (!Arrays.equals(checksum, other.checksum))
 			return false;
-		if (chunks == null) {
-			if (other.chunks != null)
-				return false;
-		} else if (!chunks.equals(other.chunks))
-			return false;
-		if (contentSize != other.contentSize)
-			return false;
 		return true;
-	}
-
-	@Override
-	public String toString() {
-		return "FileContent [checksum=" + StringUtil.toHex(checksum) + ", contentSize=" + contentSize + ", chunks=" + chunks + "]";
 	}
 
 	@Override
@@ -157,5 +130,5 @@ public class FileContentEntity implements IFileContent, Lifecycle {
 	public void onLoad(Session s, Serializable id) {
 		this.checksum = StringUtil.fromHex(checksumEncoded);
 	}
-            
+	
 }

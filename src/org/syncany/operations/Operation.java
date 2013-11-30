@@ -35,6 +35,7 @@ import org.syncany.database.VectorClock.VectorClockComparison;
 import org.syncany.database.XmlDatabaseDAO;
 import org.syncany.database.dao.DAO;
 import org.syncany.database.persistence.ChunkEntity;
+import org.syncany.database.persistence.ChunkIdEntity;
 import org.syncany.database.persistence.DatabaseVersionEntity;
 import org.syncany.database.persistence.DatabaseVersionHeaderEntity;
 import org.syncany.database.persistence.FileContentEntity;
@@ -179,10 +180,10 @@ public abstract class Operation {
 		return entity;
 	}
 
-	private List<ChunkEntity> mapChunkEntryIdsToChunkEntities(List<ChunkEntryId> chunks) {
-		List<ChunkEntity> entities = new ArrayList<ChunkEntity>();
+	private List<ChunkIdEntity> mapChunkEntryIdsToChunkEntities(List<ChunkEntryId> chunks) {
+		List<ChunkIdEntity> entities = new ArrayList<ChunkIdEntity>();
 		for (ChunkEntryId chunkEntryId : chunks) {
-			entities.add(new ChunkEntity(chunkEntryId.getArray()));
+			entities.add(new ChunkIdEntity(chunkEntryId.getArray()));
 		}
 		return entities;
 	}

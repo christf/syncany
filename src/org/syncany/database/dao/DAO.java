@@ -21,7 +21,7 @@ public class DAO<T>{
 		Session session = PersistenceUtil.getSessionFactory().openSession();
 		Transaction transaction = session.beginTransaction();
 		
-		session.save(entity);
+		session.saveOrUpdate(entity);
 		transaction.commit();
 		
 		session.flush();

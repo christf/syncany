@@ -53,23 +53,23 @@ public class MultiChunkEntity implements IMultiChunkEntry, Lifecycle{
     private String idEncoded;
 	
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    private List<ChunkEntity> chunks;
+    private List<ChunkIdEntity> chunks;
         
 	public MultiChunkEntity() {
-        this.chunks = new ArrayList<ChunkEntity>();
+        this.chunks = new ArrayList<ChunkIdEntity>();
 	}
 
 	public MultiChunkEntity(byte[] id) {
-        this.chunks = new ArrayList<ChunkEntity>();
+        this.chunks = new ArrayList<ChunkIdEntity>();
         this.id = id;
 		this.idEncoded = StringUtil.toHex(id);
     }
     
     public void addChunk(ChunkEntryId chunk) {
-    	chunks.add(new ChunkEntity(chunk.getArray()));
+    	chunks.add(new ChunkIdEntity(chunk.getArray()));
     }    
     
-    public void addChunk(ChunkEntity chunk) {
+    public void addChunk(ChunkIdEntity chunk) {
     	chunks.add(chunk);
     }  
 
@@ -84,7 +84,7 @@ public class MultiChunkEntity implements IMultiChunkEntry, Lifecycle{
 
     public List<ChunkEntryId> getChunks() {
     	List<ChunkEntryId> chunkEntryIds = new ArrayList<ChunkEntryId>();
-    	for (ChunkEntity chunk : chunks) {
+    	for (ChunkIdEntity chunk : chunks) {
     		chunkEntryIds.add(new ChunkEntryId(chunk.getChecksum()));
 		}
         return chunkEntryIds;
@@ -93,7 +93,7 @@ public class MultiChunkEntity implements IMultiChunkEntry, Lifecycle{
 	/**
 	 * @param chunks the chunks to set
 	 */
-	public void setChunks(List<ChunkEntity> chunks) {
+	public void setChunks(List<ChunkIdEntity> chunks) {
 		this.chunks = chunks;
 	}
 
