@@ -83,6 +83,7 @@ public class ChunkEntity implements Lifecycle, IChunkEntry {
 
     public void setChecksum(byte[] checksum) {
         this.checksum = checksum;
+        this.checksumEncoded = StringUtil.toHex(checksum);
     }
     
 	/**

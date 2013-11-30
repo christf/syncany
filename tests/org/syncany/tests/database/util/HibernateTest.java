@@ -59,6 +59,7 @@ public class HibernateTest {
 			chunks.add(chunk);
 			
 			fileContent.addChunk(chunk);
+
 			databaseVersion.addChunk(chunk);
 			multiChunk.addChunk(chunk);
 			if(i % 9 == 0) {
