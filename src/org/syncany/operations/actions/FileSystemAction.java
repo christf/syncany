@@ -38,6 +38,7 @@ import org.syncany.database.FileVersion;
 import org.syncany.database.FileVersionComparator;
 import org.syncany.database.FileVersionComparator.FileChange;
 import org.syncany.database.FileVersionComparator.FileVersionComparison;
+import org.syncany.database.persistence.IFileVersion;
 import org.syncany.database.persistence.IFileVersion.FileType;
 import org.syncany.util.CollectionUtil;
 import org.syncany.util.FileUtil;
@@ -48,11 +49,11 @@ public abstract class FileSystemAction {
 	protected Config config;
 	protected Database localDatabase;
 	protected Database winningDatabase;
-	protected FileVersion fileVersion1;
-	protected FileVersion fileVersion2;
+	protected IFileVersion fileVersion1;
+	protected IFileVersion fileVersion2;
 	protected FileVersionComparator fileVersionHelper;
 	
-	public FileSystemAction(Config config, Database localDatabase, Database winningDatabase, FileVersion file1, FileVersion file2) {
+	public FileSystemAction(Config config, Database localDatabase, Database winningDatabase, IFileVersion file1, IFileVersion file2) {
 		this.config = config;
 		this.localDatabase = localDatabase;
 		this.winningDatabase = winningDatabase;
@@ -61,11 +62,11 @@ public abstract class FileSystemAction {
 		this.fileVersionHelper = new FileVersionComparator(config.getLocalDir(), config.getChunker().getChecksumAlgorithm());
 	}
 	
-	public FileVersion getFile1() {
+	public IFileVersion getFile1() {
 		return fileVersion1;
 	}
 
-	public FileVersion getFile2() {
+	public IFileVersion getFile2() {
 		return fileVersion2;
 	}
 	

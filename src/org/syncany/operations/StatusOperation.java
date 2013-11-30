@@ -35,7 +35,9 @@ import org.syncany.database.FileVersion;
 import org.syncany.database.FileVersionComparator;
 import org.syncany.database.FileVersionComparator.FileVersionComparison;
 import org.syncany.database.PartialFileHistory;
+import org.syncany.database.persistence.IFileVersion;
 import org.syncany.database.persistence.IFileVersion.FileStatus;
+import org.syncany.database.persistence.IPartialFileHistory;
 import org.syncany.util.FileUtil;
 
 /**
@@ -96,9 +98,9 @@ public class StatusOperation extends Operation {
 		ChangeSet changeSet = fileVisitor.getChangeSet();
 		
 		// Find deleted files
-		for (PartialFileHistory fileHistory : database.getFileHistories()) {
+		for (IPartialFileHistory fileHistory : database.getFileHistories()) {
 			// Check if file exists, remove if it doesn't
-			FileVersion lastLocalVersion = fileHistory.getLastVersion();
+			IFileVersion lastLocalVersion = fileHistory.getLastVersion();
 			File lastLocalVersionOnDisk = new File(config.getLocalDir()+File.separator+lastLocalVersion.getPath());
 			
 			// Ignore this file history if the last version is marked "DELETED"
@@ -162,7 +164,7 @@ public class StatusOperation extends Operation {
 			PartialFileHistory expectedFileHistory = database.getFileHistory(relativeFilePath);				
 			
 			if (expectedFileHistory != null) {
-				FileVersion expectedLastFileVersion = expectedFileHistory.getLastVersion();
+				IFileVersion expectedLastFileVersion = expectedFileHistory.getLastVersion();
 				
 				// Compare
 				boolean forceChecksum = options != null && options.isForceChecksum();

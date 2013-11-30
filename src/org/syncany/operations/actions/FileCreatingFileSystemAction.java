@@ -32,12 +32,13 @@ import org.syncany.database.ChunkEntry.ChunkEntryId;
 import org.syncany.database.Database;
 import org.syncany.database.FileVersion;
 import org.syncany.database.persistence.IFileContent;
+import org.syncany.database.persistence.IFileVersion;
 import org.syncany.database.persistence.IFileVersion.FileType;
 import org.syncany.database.persistence.IMultiChunkEntry;
 import org.syncany.util.FileUtil;
 
 public abstract class FileCreatingFileSystemAction extends FileSystemAction {
-	public FileCreatingFileSystemAction(Config config, Database localDatabase, Database winningDatabase, FileVersion file1, FileVersion file2) {
+	public FileCreatingFileSystemAction(Config config, Database localDatabase, Database winningDatabase, IFileVersion file1, IFileVersion file2) {
 		super(config, localDatabase, winningDatabase, file1, file2);
 	}
 

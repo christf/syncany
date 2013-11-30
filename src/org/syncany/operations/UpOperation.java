@@ -41,10 +41,11 @@ import org.syncany.database.Database;
 import org.syncany.database.DatabaseDAO;
 import org.syncany.database.DatabaseVersion;
 import org.syncany.database.FileVersion;
-import org.syncany.database.MultiChunkEntry;
 import org.syncany.database.PartialFileHistory;
 import org.syncany.database.VectorClock;
 import org.syncany.database.XmlDatabaseDAO;
+import org.syncany.database.persistence.IDatabaseVersion;
+import org.syncany.database.persistence.IMultiChunkEntry;
 import org.syncany.operations.StatusOperation.StatusOperationOptions;
 import org.syncany.operations.StatusOperation.StatusOperationResult;
 import org.syncany.operations.UpOperation.UpOperationResult.UpResultCode;
@@ -244,8 +245,8 @@ public class UpOperation extends Operation {
 		}		
 	}
 
-	private void uploadMultiChunks(Collection<MultiChunkEntry> multiChunksEntries) throws InterruptedException, StorageException {
-		for (MultiChunkEntry multiChunkEntry : multiChunksEntries) {
+	private void uploadMultiChunks(Collection<IMultiChunkEntry> multiChunksEntries) throws InterruptedException, StorageException {
+		for (IMultiChunkEntry multiChunkEntry : multiChunksEntries) {
 			if (dirtyDatabase != null && dirtyDatabase.getMultiChunk(multiChunkEntry.getId()) != null) {
 				logger.log(Level.INFO, "- Ignoring multichunk (from dirty database, already uploaded), "+StringUtil.toHex(multiChunkEntry.getId())+" ...");	
 			}
@@ -348,12 +349,12 @@ public class UpOperation extends Operation {
 		DatabaseRemoteFile firstMergeDatabaseFile = ownDatabaseFiles.get(0);
 		DatabaseRemoteFile lastMergeDatabaseFile = ownDatabaseFiles.get(ownDatabaseFiles.size()-MIN_KEEP_DATABASE_VERSIONS-1);
 		
-		DatabaseVersion firstMergeDatabaseVersion = null;
-		DatabaseVersion lastMergeDatabaseVersion = null;
+		IDatabaseVersion firstMergeDatabaseVersion = null;
+		IDatabaseVersion lastMergeDatabaseVersion = null;
 		
 		List<RemoteFile> toDeleteDatabaseFiles = new ArrayList<RemoteFile>();
 		
-		for (DatabaseVersion databaseVersion : database.getDatabaseVersions()) {
+		for (IDatabaseVersion databaseVersion : database.getDatabaseVersions()) {
 			Long localVersion = databaseVersion.getVectorClock().get(config.getMachineName());
 
 			if (localVersion != null) {				
