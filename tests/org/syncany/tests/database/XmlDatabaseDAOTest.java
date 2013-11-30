@@ -43,8 +43,12 @@ import org.syncany.database.MultiChunkEntry;
 import org.syncany.database.PartialFileHistory;
 import org.syncany.database.VectorClock;
 import org.syncany.database.XmlDatabaseDAO;
+import org.syncany.database.persistence.IDatabaseVersion;
+import org.syncany.database.persistence.IFileContent;
 import org.syncany.database.persistence.IFileVersion.FileStatus;
 import org.syncany.database.persistence.IFileVersion.FileType;
+import org.syncany.database.persistence.IMultiChunkEntry;
+import org.syncany.database.persistence.IPartialFileHistory;
 import org.syncany.tests.util.TestAssertUtil;
 import org.syncany.tests.util.TestDatabaseUtil;
 import org.syncany.tests.util.TestFileUtil;
@@ -164,8 +168,8 @@ public class XmlDatabaseDAOTest {
 		assertEquals("Chunk not found in database loaded.", chunkB2, loadedDatabase.getChunk(chunkB2.getChecksum()));
 
 		// Check multichunks
-		MultiChunkEntry loadedMultiChunkA = loadedDatabase.getMultiChunk(multiChunkA.getId());
-		MultiChunkEntry loadedMultiChunkB = loadedDatabase.getMultiChunk(multiChunkB.getId());
+		IMultiChunkEntry loadedMultiChunkA = loadedDatabase.getMultiChunk(multiChunkA.getId());
+		IMultiChunkEntry loadedMultiChunkB = loadedDatabase.getMultiChunk(multiChunkB.getId());
 		
 		assertEquals("Multichunk not found in database loaded.", multiChunkA, loadedMultiChunkA);
 		assertEquals("Multichunk not found in database loaded.", multiChunkB, loadedMultiChunkB);
@@ -227,8 +231,8 @@ public class XmlDatabaseDAOTest {
 		assertEquals("Chunk not found in database loaded.", chunkB2, loadedDatabase.getChunk(chunkB2.getChecksum()));
 		
 		// Check file contents
-		FileContent loadedContentA = loadedDatabase.getContent(contentA.getChecksum());
-		FileContent loadedContentB = loadedDatabase.getContent(contentB.getChecksum());
+		IFileContent loadedContentA = loadedDatabase.getContent(contentA.getChecksum());
+		IFileContent loadedContentB = loadedDatabase.getContent(contentB.getChecksum());
 		
 		assertEquals("File content not found in database loaded.", contentA, loadedContentA);
 		assertEquals("File content not found in database loaded.", contentB, loadedContentB	);
@@ -296,8 +300,8 @@ public class XmlDatabaseDAOTest {
 		Database loadedDatabase = writeReadAndCompareDatabase(newDatabase);
 		 
 		// File histories
-		PartialFileHistory loadedFileHistoryA = loadedDatabase.getFileHistory(fileHistoryA.getFileId());
-		PartialFileHistory loadedFileHistoryB = loadedDatabase.getFileHistory(fileHistoryB.getFileId());
+		IPartialFileHistory loadedFileHistoryA = loadedDatabase.getFileHistory(fileHistoryA.getFileId());
+		IPartialFileHistory loadedFileHistoryB = loadedDatabase.getFileHistory(fileHistoryB.getFileId());
 		
 		assertEquals("File history not found in database loaded.", fileHistoryA, loadedFileHistoryA);
 		assertEquals("File history not found in database loaded.", fileHistoryB, loadedFileHistoryB);
@@ -331,8 +335,8 @@ public class XmlDatabaseDAOTest {
 		Database loadedDatabase = writeReadAndCompareDatabase(newDatabase);
 		
 		// Check VC
-		DatabaseVersion loadedDatabaseVersionSelectedByVectorClock = loadedDatabase.getDatabaseVersion(vc);
-		DatabaseVersion loadedDatabaseVersionSelectedFirst = loadedDatabase.getDatabaseVersions().get(0);
+		IDatabaseVersion loadedDatabaseVersionSelectedByVectorClock = loadedDatabase.getDatabaseVersion(vc);
+		IDatabaseVersion loadedDatabaseVersionSelectedFirst = loadedDatabase.getDatabaseVersions().get(0);
 				
 		assertEquals("Vector clocks do not match (selected by vector clock)", vc, loadedDatabaseVersionSelectedByVectorClock.getVectorClock());
 		assertEquals("Vector clocks do not match (selected first)", vc, loadedDatabaseVersionSelectedFirst.getVectorClock());

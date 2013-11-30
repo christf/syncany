@@ -30,10 +30,10 @@ import org.syncany.chunk.MultiChunker;
 import org.syncany.config.Config;
 import org.syncany.database.ChunkEntry.ChunkEntryId;
 import org.syncany.database.Database;
-import org.syncany.database.FileContent;
 import org.syncany.database.FileVersion;
-import org.syncany.database.MultiChunkEntry;
+import org.syncany.database.persistence.IFileContent;
 import org.syncany.database.persistence.IFileVersion.FileType;
+import org.syncany.database.persistence.IMultiChunkEntry;
 import org.syncany.util.FileUtil;
 
 public abstract class FileCreatingFileSystemAction extends FileSystemAction {
@@ -70,7 +70,7 @@ public abstract class FileCreatingFileSystemAction extends FileSystemAction {
 		File reconstructedFileInCache = config.getCache().createTempFile("file-"+reconstructedFileVersion.getName()+"-"+reconstructedFileVersion.getVersion());
 		logger.log(Level.INFO, "     - Creating file "+reconstructedFileVersion.getPath()+" to "+reconstructedFileInCache+" ...");				
 
-		FileContent fileContent = localDatabase.getContent(reconstructedFileVersion.getChecksum()); 
+		IFileContent fileContent = localDatabase.getContent(reconstructedFileVersion.getChecksum()); 
 		
 		if (fileContent == null) {
 			fileContent = winningDatabase.getContent(reconstructedFileVersion.getChecksum());
@@ -85,7 +85,7 @@ public abstract class FileCreatingFileSystemAction extends FileSystemAction {
 			Collection<ChunkEntryId> fileChunks = fileContent.getChunks();
 			
 			for (ChunkEntryId chunkChecksum : fileChunks) {
-				MultiChunkEntry multiChunkForChunk = localDatabase.getMultiChunkForChunk(chunkChecksum);
+				IMultiChunkEntry multiChunkForChunk = localDatabase.getMultiChunkForChunk(chunkChecksum);
 				
 				if (multiChunkForChunk == null) {
 					multiChunkForChunk = winningDatabase.getMultiChunkForChunk(chunkChecksum);

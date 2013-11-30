@@ -30,8 +30,8 @@ import java.util.logging.Logger;
 import org.junit.Test;
 import org.syncany.connection.plugins.Connection;
 import org.syncany.database.Database;
-import org.syncany.database.PartialFileHistory;
 import org.syncany.database.persistence.IFileVersion.FileStatus;
+import org.syncany.database.persistence.IPartialFileHistory;
 import org.syncany.tests.util.TestClient;
 import org.syncany.tests.util.TestConfigUtil;
 
@@ -159,7 +159,7 @@ public class FileVanishedScenarioTest {
 	private int getNumNotDeletedFileHistories(Database db) {
 		int numNotDeletedFileHistories = 0;
 		
-		for (PartialFileHistory fileHistory : db.getFileHistories()) {
+		for (IPartialFileHistory fileHistory : db.getFileHistories()) {
 			if (fileHistory.getLastVersion().getStatus() != FileStatus.DELETED) {
 				numNotDeletedFileHistories++;
 			}

@@ -32,10 +32,10 @@ import org.syncany.config.Config;
 import org.syncany.connection.plugins.local.LocalConnection;
 import org.syncany.database.Database;
 import org.syncany.database.DatabaseDAO;
-import org.syncany.database.DatabaseVersion;
-import org.syncany.database.FileVersion;
-import org.syncany.database.PartialFileHistory;
 import org.syncany.database.XmlDatabaseDAO;
+import org.syncany.database.persistence.IDatabaseVersion;
+import org.syncany.database.persistence.IFileVersion;
+import org.syncany.database.persistence.IPartialFileHistory;
 import org.syncany.operations.UpOperation;
 import org.syncany.tests.util.TestConfigUtil;
 import org.syncany.tests.util.TestFileUtil;
@@ -80,26 +80,26 @@ public class SyncUpOperationTest {
 		dDAO.load(localDatabase, localDatabaseFile);
 		dDAO.load(remoteDatabase, remoteDatabaseFile);
 		
-		DatabaseVersion localDatabaseVersion = localDatabase.getLastDatabaseVersion();
-		DatabaseVersion remoteDatabaseVersion = remoteDatabase.getLastDatabaseVersion();
+		IDatabaseVersion localDatabaseVersion = localDatabase.getLastDatabaseVersion();
+		IDatabaseVersion remoteDatabaseVersion = remoteDatabase.getLastDatabaseVersion();
 		
 		assertEquals(localDatabaseVersion.getHeader(), remoteDatabaseVersion.getHeader());
 
 		assertEquals(localDatabaseVersion.getFileHistories().size(),fileAmount);
 		assertEquals(localDatabaseVersion.getFileHistories().size(),remoteDatabaseVersion.getFileHistories().size());
 		
-		Collection<PartialFileHistory> localFileHistories = localDatabaseVersion.getFileHistories();
-		Collection<PartialFileHistory> remoteFileHistories = remoteDatabaseVersion.getFileHistories();
+		Collection<IPartialFileHistory> localFileHistories = localDatabaseVersion.getFileHistories();
+		Collection<IPartialFileHistory> remoteFileHistories = remoteDatabaseVersion.getFileHistories();
 	
-		List<FileVersion> remoteFileVersions = new ArrayList<FileVersion>(); 
-		List<FileVersion> localFileVersions = new ArrayList<FileVersion>();
+		List<IFileVersion> remoteFileVersions = new ArrayList<IFileVersion>(); 
+		List<IFileVersion> localFileVersions = new ArrayList<IFileVersion>();
 		
-		for (PartialFileHistory partialFileHistory : remoteFileHistories) {
+		for (IPartialFileHistory partialFileHistory : remoteFileHistories) {
 			remoteFileVersions.add(partialFileHistory.getLastVersion());
 			assertTrue(localFileHistories.contains(partialFileHistory));
 		}
 		
-		for (PartialFileHistory partialFileHistory : localFileHistories) {
+		for (IPartialFileHistory partialFileHistory : localFileHistories) {
 			localFileVersions.add(partialFileHistory.getLastVersion());
 		}
 		
@@ -109,12 +109,12 @@ public class SyncUpOperationTest {
 		compareFileVersionsAgainstOriginalFiles(originalFiles, remoteFileVersions);
 	}
 
-	private void compareFileVersionsAgainstOriginalFiles(List<File> originalFiles, List<FileVersion> localFileVersions) throws Exception {
+	private void compareFileVersionsAgainstOriginalFiles(List<File> originalFiles, List<IFileVersion> localFileVersions) throws Exception {
 		int toFind = originalFiles.size();
 		for (File originalFile : originalFiles) { 
 			String originalFileName = originalFile.getName();
 			
-			for (FileVersion fileVersion : localFileVersions) {
+			for (IFileVersion fileVersion : localFileVersions) {
 				String fileVersionFileName = fileVersion.getName();
 				
 				if(fileVersionFileName.equals(originalFileName)) {

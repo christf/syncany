@@ -32,7 +32,7 @@ import org.junit.Test;
 import org.syncany.connection.plugins.Connection;
 import org.syncany.connection.plugins.local.LocalConnection;
 import org.syncany.database.Database;
-import org.syncany.database.DatabaseVersion;
+import org.syncany.database.persistence.IDatabaseVersion;
 import org.syncany.operations.StatusOperation.StatusOperationResult;
 import org.syncany.operations.UpOperation.UpOperationResult;
 import org.syncany.tests.util.TestClient;
@@ -66,7 +66,7 @@ public class SymlinkSyncScenarioTest {
 		
 		// Test 2: Check database for inconsistencies
 		Database database = clientA.loadLocalDatabase();
-		DatabaseVersion databaseVersion = database.getLastDatabaseVersion();
+		IDatabaseVersion databaseVersion = database.getLastDatabaseVersion();
 
 		assertNotNull("File should be uploaded.", database.getFileHistory("symlink-name"));		
 		assertNotNull("There should be a new database version, because file should not have been added.", databaseVersion);

@@ -26,6 +26,7 @@ import org.junit.Test;
 import org.syncany.database.Branch;
 import org.syncany.database.Branches;
 import org.syncany.database.DatabaseVersionHeader;
+import org.syncany.database.persistence.IDatabaseVersionHeader;
 import org.syncany.operations.DatabaseReconciliator;
 import org.syncany.tests.util.TestDatabaseUtil;
 
@@ -818,7 +819,7 @@ public class DatabaseReconciliatorTest {
 	}
 	
 	private void printBranch(Branch branch) {
-		for (DatabaseVersionHeader databaseVersionHeader : branch.getAll()) {
+		for (IDatabaseVersionHeader databaseVersionHeader : branch.getAll()) {
 			System.out.println("- "+databaseVersionHeader);
 		}
 	}
