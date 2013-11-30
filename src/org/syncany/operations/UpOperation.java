@@ -40,12 +40,12 @@ import org.syncany.connection.plugins.TransferManager;
 import org.syncany.database.Database;
 import org.syncany.database.DatabaseDAO;
 import org.syncany.database.DatabaseVersion;
-import org.syncany.database.FileVersion;
-import org.syncany.database.PartialFileHistory;
 import org.syncany.database.VectorClock;
 import org.syncany.database.XmlDatabaseDAO;
 import org.syncany.database.persistence.IDatabaseVersion;
+import org.syncany.database.persistence.IFileVersion;
 import org.syncany.database.persistence.IMultiChunkEntry;
+import org.syncany.database.persistence.IPartialFileHistory;
 import org.syncany.operations.StatusOperation.StatusOperationOptions;
 import org.syncany.operations.StatusOperation.StatusOperationResult;
 import org.syncany.operations.UpOperation.UpOperationResult.UpResultCode;
@@ -225,8 +225,8 @@ public class UpOperation extends Operation {
 	private void updateResultChangeSet(DatabaseVersion newDatabaseVersion) {
 		ChangeSet changeSet = result.getChangeSet();
 		
-		for (PartialFileHistory partialFileHistory : newDatabaseVersion.getFileHistories()) {
-			FileVersion lastFileVersion = partialFileHistory.getLastVersion();
+		for (IPartialFileHistory partialFileHistory : newDatabaseVersion.getFileHistories()) {
+			IFileVersion lastFileVersion = partialFileHistory.getLastVersion();
 			
 			switch (lastFileVersion.getStatus()) {
 				case NEW:

@@ -19,12 +19,12 @@ package org.syncany.operations.actions;
 
 import org.syncany.config.Config;
 import org.syncany.database.Database;
-import org.syncany.database.FileVersion;
 import org.syncany.database.FileVersionComparator.FileChange;
+import org.syncany.database.persistence.IFileVersion;
 
 public class SetAttributesFileSystemAction extends FileSystemAction {
 
-	public SetAttributesFileSystemAction(Config config, FileVersion newFileVersion, Database localDatabase, Database winningDatabase) {
+	public SetAttributesFileSystemAction(Config config, IFileVersion newFileVersion, Database localDatabase, Database winningDatabase) {
 		super(config, localDatabase, winningDatabase, null, newFileVersion);
 	}
 	
