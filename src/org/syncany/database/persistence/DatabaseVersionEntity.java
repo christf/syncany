@@ -15,8 +15,8 @@ import javax.persistence.Table;
 
 import org.hibernate.annotations.LazyCollection;
 import org.hibernate.annotations.LazyCollectionOption;
+import org.syncany.database.ChunkEntry.ChunkEntryId;
 import org.syncany.database.VectorClock;
-import org.syncany.database.persistence.ChunkEntry.ChunkEntryId;
 import org.syncany.util.StringUtil;
 
 
@@ -109,11 +109,6 @@ public class DatabaseVersionEntity implements IDatabaseVersion {
 	}
 
 	@Override
-	public VectorClock getPreviousVectorClock() {
-		return header.getPreviousVectorClock();
-	}
-
-	@Override
 	public String getClient() {
 		return header.getClient();
 	}
@@ -187,7 +182,7 @@ public class DatabaseVersionEntity implements IDatabaseVersion {
 		if(content instanceof FileContentEntity) {
 			fileContents.put(StringUtil.toHex(content.getChecksum()), (FileContentEntity) content);
 		} else {
-			throw new RuntimeException("Invalid subclass for multichunk");
+			throw new RuntimeException("Invalid subclass for FileContentEntity");
 		}	
 	}
 

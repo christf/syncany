@@ -35,10 +35,10 @@ import org.apache.commons.io.FileUtils;
 import org.syncany.config.Config;
 import org.syncany.database.Database;
 import org.syncany.database.FileVersion;
-import org.syncany.database.FileVersion.FileType;
 import org.syncany.database.FileVersionComparator;
 import org.syncany.database.FileVersionComparator.FileChange;
 import org.syncany.database.FileVersionComparator.FileVersionComparison;
+import org.syncany.database.persistence.IFileVersion.FileType;
 import org.syncany.util.CollectionUtil;
 import org.syncany.util.FileUtil;
 

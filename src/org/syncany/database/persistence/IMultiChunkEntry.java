@@ -19,7 +19,7 @@ package org.syncany.database.persistence;
 
 import java.util.List;
 
-import org.syncany.database.persistence.ChunkEntry.ChunkEntryId;
+import org.syncany.database.ChunkEntry.ChunkEntryId;
 
 
 /**

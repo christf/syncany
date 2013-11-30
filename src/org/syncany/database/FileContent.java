@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.syncany.database.ChunkEntry.ChunkEntryId;
+import org.syncany.database.persistence.IFileContent;
 import org.syncany.util.StringUtil;
 
 /**
@@ -40,7 +41,7 @@ import org.syncany.util.StringUtil;
  * 
  * @author Philipp C. Heckel <philipp.heckel@gmail.com>
  */
-public class FileContent {
+public class FileContent implements IFileContent {
     private byte[] checksum;
     private long contentSize;
     

@@ -34,8 +34,8 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.syncany.database.FileVersion.FileStatus;
-import org.syncany.database.FileVersion.FileType;
+import org.syncany.database.persistence.IFileVersion.FileStatus;
+import org.syncany.database.persistence.IFileVersion.FileType;
 import org.syncany.util.FileUtil;
 import org.syncany.util.StringUtil;
 

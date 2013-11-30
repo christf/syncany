@@ -19,6 +19,8 @@ package org.syncany.database.persistence;
 
 import java.util.Date;
 
+import org.syncany.database.FileContent;
+
 /**
  * A file version represents a version of a file at a certain time and captures
  * all of a file's properties. 

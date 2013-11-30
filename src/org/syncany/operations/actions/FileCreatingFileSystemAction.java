@@ -28,12 +28,12 @@ import org.apache.commons.io.FileUtils;
 import org.syncany.chunk.MultiChunk;
 import org.syncany.chunk.MultiChunker;
 import org.syncany.config.Config;
+import org.syncany.database.ChunkEntry.ChunkEntryId;
 import org.syncany.database.Database;
 import org.syncany.database.FileContent;
 import org.syncany.database.FileVersion;
 import org.syncany.database.MultiChunkEntry;
-import org.syncany.database.ChunkEntry.ChunkEntryId;
-import org.syncany.database.FileVersion.FileType;
+import org.syncany.database.persistence.IFileVersion.FileType;
 import org.syncany.util.FileUtil;
 
 public abstract class FileCreatingFileSystemAction extends FileSystemAction {

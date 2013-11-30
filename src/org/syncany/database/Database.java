@@ -25,7 +25,12 @@ import java.util.List;
 import java.util.Map;
 
 import org.syncany.database.ChunkEntry.ChunkEntryId;
-import org.syncany.database.FileVersion.FileStatus;
+import org.syncany.database.persistence.IChunkEntry;
+import org.syncany.database.persistence.IDatabaseVersion;
+import org.syncany.database.persistence.IFileContent;
+import org.syncany.database.persistence.IFileVersion.FileStatus;
+import org.syncany.database.persistence.IMultiChunkEntry;
+import org.syncany.database.persistence.IPartialFileHistory;
 import org.syncany.util.ByteArray;
 
 /**
@@ -47,7 +52,7 @@ import org.syncany.util.ByteArray;
  * @author Philipp C. Heckel <philipp.heckel@gmail.com>
  */
 public class Database {
-    private List<DatabaseVersion> databaseVersions;    
+    private List<IDatabaseVersion> databaseVersions;    
 	
     // Caches
     private DatabaseVersion fullDatabaseVersionCache;
@@ -56,7 +61,7 @@ public class Database {
     private Map<ByteArray, List<PartialFileHistory>> contentChecksumFileHistoriesCache;
 
     public Database() {
-    	databaseVersions = new ArrayList<DatabaseVersion>();    	
+    	databaseVersions = new ArrayList<IDatabaseVersion>();    	
         
     	// Caches
     	fullDatabaseVersionCache = new DatabaseVersion();    	
@@ -65,7 +70,7 @@ public class Database {
     	contentChecksumFileHistoriesCache = new HashMap<ByteArray, List<PartialFileHistory>>();
     }   	
 	
-	public DatabaseVersion getLastDatabaseVersion() {
+	public IDatabaseVersion getLastDatabaseVersion() {
 		if (databaseVersions.size() == 0) {
 			return null;
 		}
@@ -73,7 +78,7 @@ public class Database {
 		return databaseVersions.get(databaseVersions.size()-1);
 	}
 	
-	public DatabaseVersion getFirstDatabaseVersion() {
+	public IDatabaseVersion getFirstDatabaseVersion() {
 		if (databaseVersions.size() == 0) {
 			return null;
 		}
@@ -81,7 +86,7 @@ public class Database {
 		return databaseVersions.get(0);
 	}		
 		
-	public List<DatabaseVersion> getDatabaseVersions() {
+	public List<IDatabaseVersion> getDatabaseVersions() {
 		return Collections.unmodifiableList(databaseVersions);
 	}	
 
@@ -89,22 +94,22 @@ public class Database {
 		return databaseVersionIdCache.get(vectorClock);
 	}	
 
-	public FileContent getContent(byte[] checksum) {
+	public IFileContent getContent(byte[] checksum) {
 		return (checksum != null) ? fullDatabaseVersionCache.getFileContent(checksum) : null;
 	}
 	
-	public ChunkEntry getChunk(byte[] checksum) {
+	public IChunkEntry getChunk(byte[] checksum) {
 		return fullDatabaseVersionCache.getChunk(checksum);
 	}
 	
-	public MultiChunkEntry getMultiChunk(byte[] id) {
+	public IMultiChunkEntry getMultiChunk(byte[] id) {
 		return fullDatabaseVersionCache.getMultiChunk(id);
 	}	
 	
 	/**
      * Get a multichunk that this chunk is contained in.
      */
-	public MultiChunkEntry getMultiChunkForChunk(ChunkEntryId chunk) {
+	public IMultiChunkEntry getMultiChunkForChunk(ChunkEntryId chunk) {
 		return fullDatabaseVersionCache.getMultiChunk(chunk);
 	}	
 	
@@ -116,11 +121,11 @@ public class Database {
 		return contentChecksumFileHistoriesCache.get(new ByteArray(fileContentChecksum));
 	}	
 	
-	public PartialFileHistory getFileHistory(long fileId) {
+	public IPartialFileHistory getFileHistory(long fileId) {
 		return fullDatabaseVersionCache.getFileHistory(fileId); 
 	}	
 
-	public Collection<PartialFileHistory> getFileHistories() {
+	public Collection<IPartialFileHistory> getFileHistories() {
 		return fullDatabaseVersionCache.getFileHistories();		
 	}
 	
@@ -128,14 +133,14 @@ public class Database {
 	public Branch getBranch() {
 		Branch branch = new Branch();
 		
-		for (DatabaseVersion databaseVersion : databaseVersions) {
+		for (IDatabaseVersion databaseVersion : databaseVersions) {
 			branch.add(databaseVersion.getHeader());
 		}
 		
 		return branch;
 	}
 	
-	public void addDatabaseVersion(DatabaseVersion databaseVersion) {		
+	public void addDatabaseVersion(IDatabaseVersion databaseVersion) {		
 		databaseVersions.add(databaseVersion);
 		
 		// Populate caches

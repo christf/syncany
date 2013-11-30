@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.syncany.database.ChunkEntry.ChunkEntryId;
+import org.syncany.database.persistence.IMultiChunkEntry;
 import org.syncany.util.StringUtil;
 
 /**
@@ -34,7 +35,7 @@ import org.syncany.util.StringUtil;
  * 
  * @author Philipp C. Heckel <philipp.heckel@gmail.com>
  */
-public class MultiChunkEntry  {
+public class MultiChunkEntry implements IMultiChunkEntry {
     private byte[] id;    
     private List<ChunkEntryId> chunks;
         

@@ -19,6 +19,7 @@ package org.syncany.operations;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -27,6 +28,8 @@ import org.syncany.database.Database;
 import org.syncany.database.DatabaseDAO;
 import org.syncany.database.DatabaseVersion;
 import org.syncany.database.XmlDatabaseDAO;
+import org.syncany.database.dao.DAO;
+import org.syncany.database.persistence.DatabaseVersionEntity;
 
 /**
  * Operations represent and implement Syncany's business logic. They typically
@@ -73,6 +76,18 @@ public abstract class Operation {
 	
 	protected Database loadLocalDatabase() throws IOException {
 		return loadLocalDatabase(config.getDatabaseFile());
+	}
+	
+	protected Database loadLocalDatabaseFromSQL() throws IOException {
+		Database db = new Database();
+		
+		DAO<DatabaseVersionEntity> dao = new DAO<DatabaseVersionEntity>(DatabaseVersionEntity.class);
+		
+		List<DatabaseVersionEntity> databaseVersions = dao.getAll();
+		
+		db.addDatabaseVersions(databaseVersions);
+		
+		return db;
 	}
 	
 	protected Database loadLocalDatabase(File localDatabaseFile) throws IOException {

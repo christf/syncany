@@ -39,12 +39,12 @@ import org.syncany.database.Database;
 import org.syncany.database.DatabaseVersion;
 import org.syncany.database.FileContent;
 import org.syncany.database.FileVersion;
-import org.syncany.database.FileVersion.FileStatus;
-import org.syncany.database.FileVersion.FileType;
 import org.syncany.database.FileVersionComparator;
 import org.syncany.database.FileVersionComparator.FileProperties;
 import org.syncany.database.MultiChunkEntry;
 import org.syncany.database.PartialFileHistory;
+import org.syncany.database.persistence.IFileVersion.FileStatus;
+import org.syncany.database.persistence.IFileVersion.FileType;
 import org.syncany.util.FileUtil;
 import org.syncany.util.StringUtil;
 

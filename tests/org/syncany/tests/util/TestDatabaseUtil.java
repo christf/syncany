@@ -31,10 +31,10 @@ import org.syncany.database.DatabaseDAO;
 import org.syncany.database.DatabaseVersion;
 import org.syncany.database.DatabaseVersionHeader;
 import org.syncany.database.FileVersion;
-import org.syncany.database.XmlDatabaseDAO;
 import org.syncany.database.VectorClock;
-import org.syncany.database.FileVersion.FileStatus;
-import org.syncany.database.FileVersion.FileType;
+import org.syncany.database.XmlDatabaseDAO;
+import org.syncany.database.persistence.IFileVersion.FileStatus;
+import org.syncany.database.persistence.IFileVersion.FileType;
 
 public class TestDatabaseUtil {
 	private static Pattern databaseVersionHeaderPattern = Pattern.compile("([^/]+)/\\(([^)]+)\\)/T=?(\\d+)");

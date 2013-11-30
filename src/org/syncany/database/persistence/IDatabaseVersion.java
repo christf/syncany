@@ -21,8 +21,8 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
+import org.syncany.database.ChunkEntry.ChunkEntryId;
 import org.syncany.database.VectorClock;
-import org.syncany.database.persistence.ChunkEntry.ChunkEntryId;
 
 public interface IDatabaseVersion {
   
@@ -37,16 +37,14 @@ public interface IDatabaseVersion {
 	public void setVectorClock(VectorClock vectorClock);
 	
 	public void setClient(String client);
-	
-	public VectorClock getPreviousVectorClock();
-	
+		
 	public String getClient();
 
     public IChunkEntry getChunk(byte[] checksum);
     
     public void addChunk(IChunkEntry chunk);
 
-    public void addChunks(List<IChunkEntry> chunk);
+    public void addChunks(List<IChunkEntry> chunks);
 
     public Collection<IChunkEntry> getChunks();
 

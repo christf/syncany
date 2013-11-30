@@ -17,7 +17,7 @@
  */
 package org.syncany.tests.operations;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -28,7 +28,7 @@ import org.syncany.config.Config;
 import org.syncany.config.to.ConfigTO;
 import org.syncany.config.to.RepoTO;
 import org.syncany.database.FileVersion;
-import org.syncany.database.FileVersion.FileType;
+import org.syncany.database.persistence.IFileVersion.FileType;
 import org.syncany.operations.FileSystemActionComparator;
 import org.syncany.operations.actions.DeleteFileSystemAction;
 import org.syncany.operations.actions.FileSystemAction;

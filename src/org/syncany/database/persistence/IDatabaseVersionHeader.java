@@ -29,8 +29,6 @@ public interface IDatabaseVersionHeader {
 	
 	public VectorClock getVectorClock();
 	
-	public VectorClock getPreviousVectorClock();
-	
 	public void setVectorClock(VectorClock vectorClock);
 	
 	public String getClient();

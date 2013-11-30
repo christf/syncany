@@ -36,7 +36,7 @@ import javax.persistence.Transient;
 import org.hibernate.CallbackException;
 import org.hibernate.Session;
 import org.hibernate.classic.Lifecycle;
-import org.syncany.database.persistence.ChunkEntry.ChunkEntryId;
+import org.syncany.database.ChunkEntry.ChunkEntryId;
 import org.syncany.util.StringUtil;
 
 @Entity

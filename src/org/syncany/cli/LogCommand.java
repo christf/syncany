@@ -32,8 +32,8 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
-import org.syncany.database.FileVersion;
 import org.syncany.database.PartialFileHistory;
+import org.syncany.database.persistence.IFileVersion;
 import org.syncany.operations.LogOperation;
 import org.syncany.operations.LogOperation.LogOperationOptions;
 import org.syncany.operations.LogOperation.LogOperationResult;
@@ -87,7 +87,7 @@ public class LogCommand extends Command {
 		return operationOptions;
 	}
 
-	private void printOneVersion(FileVersion fileVersion) {
+	private void printOneVersion(IFileVersion fileVersion) {
 		String posixPermissions = (fileVersion.getPosixPermissions() != null) ? fileVersion.getPosixPermissions() : "";
 		String dosAttributes = (fileVersion.getDosAttributes() != null) ? fileVersion.getDosAttributes() : "";
 
@@ -102,7 +102,7 @@ public class LogCommand extends Command {
 			if (lastOnly) {
 				result = Math.max(result, fileHistory.getLastVersion().getPath().length());
 			} else {
-				for (FileVersion fileVersion : fileHistory.getFileVersions().values()) {
+				for (IFileVersion fileVersion : fileHistory.getFileVersions().values()) {
 					result = Math.max(result, fileVersion.getPath().length());
 				}
 			}
@@ -116,13 +116,13 @@ public class LogCommand extends Command {
 			longestPath = longestPath(operationResult.getFileHistories(), true);
 		}
 		for (PartialFileHistory fileHistory : operationResult.getFileHistories()) {
-			FileVersion lastVersion = fileHistory.getLastVersion();
+			IFileVersion lastVersion = fileHistory.getLastVersion();
 			switch (operationResult.getFormat()) {
 			case "full":
 				Iterator<Long> fileVersionNumber = fileHistory.getDescendingVersionNumber();
 				out.printf("%s %16x\n", lastVersion.getPath(), fileHistory.getFileId());
 				while (fileVersionNumber.hasNext()) {
-					FileVersion fileVersion = fileHistory.getFileVersion(fileVersionNumber.next());
+					IFileVersion fileVersion = fileHistory.getFileVersion(fileVersionNumber.next());
 					out.print('\t');
 					printOneVersion(fileVersion);
 					if (fileVersion.getPath().equals(lastVersion.getPath())) {

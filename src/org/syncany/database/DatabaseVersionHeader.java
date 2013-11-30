@@ -19,7 +19,9 @@ package org.syncany.database;
 
 import java.util.Date;
 
-public class DatabaseVersionHeader {
+import org.syncany.database.persistence.IDatabaseVersionHeader;
+
+public class DatabaseVersionHeader implements IDatabaseVersionHeader {
 
     // DB Version and versions of other users (= DB basis)
     private Date date;

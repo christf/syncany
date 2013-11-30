@@ -22,7 +22,7 @@ import java.util.logging.Level;
 import org.syncany.config.Config;
 import org.syncany.database.Database;
 import org.syncany.database.FileVersion;
-import org.syncany.database.FileVersion.FileStatus;
+import org.syncany.database.persistence.IFileVersion.FileStatus;
 
 public class ChangeFileSystemAction extends FileCreatingFileSystemAction {
 	public ChangeFileSystemAction(Config config, FileVersion fromFileVersion, FileVersion toFileVersion, Database localDatabase, Database winningDatabase) {

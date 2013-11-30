@@ -39,9 +39,15 @@ import javax.xml.stream.XMLStreamWriter;
 
 import org.syncany.chunk.Transformer;
 import org.syncany.database.ChunkEntry.ChunkEntryId;
-import org.syncany.database.FileVersion.FileStatus;
-import org.syncany.database.FileVersion.FileType;
 import org.syncany.database.VectorClock.VectorClockComparison;
+import org.syncany.database.persistence.IChunkEntry;
+import org.syncany.database.persistence.IDatabaseVersion;
+import org.syncany.database.persistence.IFileContent;
+import org.syncany.database.persistence.IFileVersion;
+import org.syncany.database.persistence.IFileVersion.FileStatus;
+import org.syncany.database.persistence.IFileVersion.FileType;
+import org.syncany.database.persistence.IMultiChunkEntry;
+import org.syncany.database.persistence.IPartialFileHistory;
 import org.syncany.util.FileUtil;
 import org.syncany.util.StringUtil;
 import org.xml.sax.Attributes;
@@ -91,7 +97,7 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 			 
 			xmlOut.writeStartElement("databaseVersions");
 			 			
-			for (DatabaseVersion databaseVersion : db.getDatabaseVersions()) {
+			for (IDatabaseVersion databaseVersion : db.getDatabaseVersions()) {
 				boolean databaseVersionInSaveRange = databaseVersionInRange(databaseVersion, versionFrom, versionTo);
 
 				if (!databaseVersionInSaveRange) {				
@@ -127,7 +133,7 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 		}
 	}			
 
-	private void writeDatabaseVersionHeader(IndentXmlStreamWriter xmlOut, DatabaseVersion databaseVersion) throws IOException, XMLStreamException {
+	private void writeDatabaseVersionHeader(IndentXmlStreamWriter xmlOut, IDatabaseVersion databaseVersion) throws IOException, XMLStreamException {
 		if (databaseVersion.getTimestamp() == null || databaseVersion.getClient() == null
 				|| databaseVersion.getVectorClock() == null || databaseVersion.getVectorClock().isEmpty()) {
 
@@ -156,11 +162,11 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 		xmlOut.writeEndElement(); // </header>	
 	}
 	
-	private void writeChunks(IndentXmlStreamWriter xmlOut, Collection<ChunkEntry> chunks) throws XMLStreamException {
+	private void writeChunks(IndentXmlStreamWriter xmlOut, Collection<IChunkEntry> chunks) throws XMLStreamException {
 		if (chunks.size() > 0) {
 			xmlOut.writeStartElement("chunks");
 								
-			for (ChunkEntry chunk : chunks) {
+			for (IChunkEntry chunk : chunks) {
 				xmlOut.writeEmptyElement("chunk");
 				xmlOut.writeAttribute("checksum", StringUtil.toHex(chunk.getChecksum()));
 				xmlOut.writeAttribute("size", chunk.getSize());
@@ -170,11 +176,11 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 		}		
 	}
 	
-	private void writeMultiChunks(IndentXmlStreamWriter xmlOut, Collection<MultiChunkEntry> multiChunks) throws XMLStreamException {
+	private void writeMultiChunks(IndentXmlStreamWriter xmlOut, Collection<IMultiChunkEntry> multiChunks) throws XMLStreamException {
 		if (multiChunks.size() > 0) {
 			xmlOut.writeStartElement("multiChunks");
 			
-			for (MultiChunkEntry multiChunk : multiChunks) {
+			for (IMultiChunkEntry multiChunk : multiChunks) {
 				xmlOut.writeStartElement("multiChunk");
 				xmlOut.writeAttribute("id", StringUtil.toHex(multiChunk.getId()));
 			
@@ -194,11 +200,11 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 		}
 	}
 	
-	private void writeFileContents(IndentXmlStreamWriter xmlOut, Collection<FileContent> fileContents) throws XMLStreamException {
+	private void writeFileContents(IndentXmlStreamWriter xmlOut, Collection<IFileContent> fileContents) throws XMLStreamException {
 		if (fileContents.size() > 0) {
 			xmlOut.writeStartElement("fileContents");
 			
-			for (FileContent fileContent : fileContents) {
+			for (IFileContent fileContent : fileContents) {
 				xmlOut.writeStartElement("fileContent");
 				xmlOut.writeAttribute("checksum", StringUtil.toHex(fileContent.getChecksum()));
 				xmlOut.writeAttribute("size", fileContent.getSize());
@@ -219,17 +225,17 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 		}		
 	}
 	
-	private void writeFileHistories(IndentXmlStreamWriter xmlOut, Collection<PartialFileHistory> fileHistories) throws XMLStreamException, IOException {
+	private void writeFileHistories(IndentXmlStreamWriter xmlOut, Collection<IPartialFileHistory> fileHistories) throws XMLStreamException, IOException {
 		xmlOut.writeStartElement("fileHistories");
 		
-		for (PartialFileHistory fileHistory : fileHistories) {
+		for (IPartialFileHistory fileHistory : fileHistories) {
 			xmlOut.writeStartElement("fileHistory");
 			xmlOut.writeAttribute("id", fileHistory.getFileId());
 			
 			xmlOut.writeStartElement("fileVersions");
 			
-			Collection<FileVersion> fileVersions = fileHistory.getFileVersions().values();
-			for (FileVersion fileVersion : fileVersions) {
+			Collection<IFileVersion> fileVersions = fileHistory.getFileVersions().values();
+			for (IFileVersion fileVersion : fileVersions) {
 				if (fileVersion.getVersion() == null || fileVersion.getType() == null || fileVersion.getPath() == null 
 						|| fileVersion.getStatus() == null || fileVersion.getSize() == null || fileVersion.getLastModified() == null) {
 					
@@ -312,7 +318,7 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 		return greaterOrEqualToVersionFrom && lowerOrEqualToVersionTo;		
 	}
 	
-	private boolean databaseVersionInRange(DatabaseVersion databaseVersion, DatabaseVersion databaseVersionFrom, DatabaseVersion databaseVersionTo) {
+	private boolean databaseVersionInRange(IDatabaseVersion databaseVersion, IDatabaseVersion databaseVersionFrom, IDatabaseVersion databaseVersionTo) {
 		VectorClock vectorClock = databaseVersion.getVectorClock();
 		VectorClock vectorClockRangeFrom = (databaseVersionFrom != null) ? databaseVersionFrom.getVectorClock() : null;
 		VectorClock vectorClockRangeTo = (databaseVersionTo != null) ? databaseVersionTo.getVectorClock() : null;
@@ -423,18 +429,18 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 	}
 	
 	public class DatabaseXmlHandler extends DefaultHandler {
-		private Database database;
 		private VectorClock versionFrom;
+		private Database database;
 		private VectorClock versionTo;
 		private boolean headersOnly;
 
 		private String elementPath;
-		private DatabaseVersion databaseVersion;
+		private IDatabaseVersion databaseVersion;
 		private VectorClock vectorClock;
 		private boolean vectorClockInLoadRange;
-		private FileContent fileContent;
-		private MultiChunkEntry multiChunk;
-		private PartialFileHistory fileHistory;
+		private IFileContent fileContent;
+		private IMultiChunkEntry multiChunk;
+		private IPartialFileHistory fileHistory;
 		
 		public DatabaseXmlHandler(Database database, VectorClock fromVersion, VectorClock toVersion, boolean headersOnly) {
 			this.elementPath = "";

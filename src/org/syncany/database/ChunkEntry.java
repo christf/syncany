@@ -19,6 +19,7 @@ package org.syncany.database;
 
 import java.util.Arrays;
 
+import org.syncany.database.persistence.IChunkEntry;
 import org.syncany.util.ByteArray;
 import org.syncany.util.StringUtil;
 
@@ -27,7 +28,7 @@ import org.syncany.util.StringUtil;
  *
  * @author pheckel
  */
-public class ChunkEntry {
+public class ChunkEntry implements IChunkEntry {
     private byte[] checksum;      
     private int size;    
 

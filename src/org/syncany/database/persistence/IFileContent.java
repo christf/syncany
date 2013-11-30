@@ -19,8 +19,10 @@ package org.syncany.database.persistence;
 
 import java.util.Collection;
 
+import org.syncany.database.ChunkEntry;
+import org.syncany.database.ChunkEntry.ChunkEntryId;
 import org.syncany.database.FileVersion;
-import org.syncany.database.persistence.ChunkEntry.ChunkEntryId;
+import org.syncany.database.MultiChunkEntry;
 
 /**
  * A file content represents the content of a file. It contains a list of 

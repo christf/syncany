@@ -21,6 +21,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Date;
 
+import org.syncany.database.persistence.IFileVersion;
 import org.syncany.util.StringUtil;
 
 /**
@@ -37,7 +38,7 @@ import org.syncany.util.StringUtil;
  * @see PartialFileHistory
  * @author Philipp C. Heckel <philipp.heckel@gmail.com>
  */
-public class FileVersion implements Cloneable {
+public class FileVersion implements Cloneable, IFileVersion {
 	// Mandatory
     private Long version; // TODO [low] This can be an Integer. No need for a long!
     private String path;
@@ -256,48 +257,4 @@ public class FileVersion implements Cloneable {
 		return true;
 	}
 
-	public enum FileStatus {
-		NEW ("NEW"), 
-		CHANGED ("CHANGED"), 
-		RENAMED ("RENAMED"), 
-		DELETED ("DELETED");
-		
-		private String name;       
-		
-		private FileStatus(String name) {
-			this.name = name;
-		}
-		
-		public boolean equalsName(String otherName){
-			return (otherName == null) ? false : name.equals(otherName);
-		}
-		
-		public String toString() {
-			return name;
-		}	
-	}
-	
-	/**
-	 * A {@link FileVersion} can be of either one of the types in this enum.
-	 * Types are treated differently during the index and synchronization process.
-	 */
-	public enum FileType {
-		FILE ("FILE"), 
-		FOLDER ("FOLDER"),
-		SYMLINK ("SYMLINK");
-		
-		private String name;       
-		
-		private FileType(String name) {
-			this.name = name;
-		}
-		
-		public boolean equalsName(String otherName){
-			return (otherName == null) ? false : name.equals(otherName);
-		}
-		
-		public String toString() {
-			return name;
-		}	
-	}
 }

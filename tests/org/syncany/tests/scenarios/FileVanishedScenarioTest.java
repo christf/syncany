@@ -17,7 +17,10 @@
  */
 package org.syncany.tests.scenarios;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.syncany.tests.util.TestAssertUtil.assertDatabaseFileEquals;
 import static org.syncany.tests.util.TestAssertUtil.assertFileListEquals;
 
@@ -27,8 +30,8 @@ import java.util.logging.Logger;
 import org.junit.Test;
 import org.syncany.connection.plugins.Connection;
 import org.syncany.database.Database;
-import org.syncany.database.FileVersion.FileStatus;
 import org.syncany.database.PartialFileHistory;
+import org.syncany.database.persistence.IFileVersion.FileStatus;
 import org.syncany.tests.util.TestClient;
 import org.syncany.tests.util.TestConfigUtil;
 

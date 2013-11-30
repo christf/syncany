@@ -17,7 +17,8 @@
  */
 package org.syncany.tests.util;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.net.URL;
 import java.util.Map;

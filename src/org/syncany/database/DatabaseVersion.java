@@ -20,34 +20,41 @@ package org.syncany.database;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.syncany.database.ChunkEntry.ChunkEntryId;
+import org.syncany.database.persistence.IChunkEntry;
+import org.syncany.database.persistence.IDatabaseVersion;
+import org.syncany.database.persistence.IFileContent;
+import org.syncany.database.persistence.IFileVersion;
+import org.syncany.database.persistence.IMultiChunkEntry;
+import org.syncany.database.persistence.IPartialFileHistory;
 import org.syncany.util.ByteArray;
 
-public class DatabaseVersion {
+public class DatabaseVersion implements IDatabaseVersion {
     private DatabaseVersionHeader header; 
     
     // Full DB in RAM
-    private Map<ByteArray, ChunkEntry> chunks;
-    private Map<ByteArray, MultiChunkEntry> multiChunks;
-    private Map<ByteArray, FileContent> fileContents;
-    private Map<Long, PartialFileHistory> fileHistories;
+    private Map<ByteArray, IChunkEntry> chunks;
+    private Map<ByteArray, IMultiChunkEntry> multiChunks;
+    private Map<ByteArray, IFileContent> fileContents;
+    private Map<Long, IPartialFileHistory> fileHistories;
 
     // Quick access cache
-    private Map<ChunkEntryId, MultiChunkEntry> chunkMultiChunkCache;    
+    private Map<ChunkEntryId, IMultiChunkEntry> chunkMultiChunkCache;    
 
     public DatabaseVersion() {
     	header = new DatabaseVersionHeader();
 
         // Full DB in RAM
-        chunks = new HashMap<ByteArray, ChunkEntry>();
-        multiChunks = new HashMap<ByteArray, MultiChunkEntry>();
-        fileContents = new HashMap<ByteArray, FileContent>();
-        fileHistories = new HashMap<Long, PartialFileHistory>();          
+        chunks = new HashMap<ByteArray, IChunkEntry>();
+        multiChunks = new HashMap<ByteArray, IMultiChunkEntry>();
+        fileContents = new HashMap<ByteArray, IFileContent>();
+        fileHistories = new HashMap<Long, IPartialFileHistory>();          
 
         // Quick access cache
-        chunkMultiChunkCache = new HashMap<ChunkEntryId, MultiChunkEntry>();
+        chunkMultiChunkCache = new HashMap<ChunkEntryId, IMultiChunkEntry>();
     }
     
 	public DatabaseVersionHeader getHeader() {
@@ -80,21 +87,27 @@ public class DatabaseVersion {
 
     // Chunk
     
-    public ChunkEntry getChunk(byte[] checksum) {
+    public IChunkEntry getChunk(byte[] checksum) {
         return chunks.get(new ByteArray(checksum));
     }    
     
-    public void addChunk(ChunkEntry chunk) {
+    public void addChunk(IChunkEntry chunk) {
         chunks.put(new ByteArray(chunk.getChecksum()), chunk);        
     }
     
-    public Collection<ChunkEntry> getChunks() {
+	public void addChunks(List<IChunkEntry> chunks) {
+		for (IChunkEntry chunk : chunks) {
+			addChunk(chunk);	
+		}
+	}    
+    
+    public Collection<IChunkEntry> getChunks() {
         return chunks.values();
     }
     
     // Multichunk    
     
-    public void addMultiChunk(MultiChunkEntry multiChunk) {
+    public void addMultiChunk(IMultiChunkEntry multiChunk) {
         multiChunks.put(new ByteArray(multiChunk.getId()), multiChunk);
         
         // Populate cache
@@ -103,53 +116,53 @@ public class DatabaseVersion {
         }
     }
     
-    public MultiChunkEntry getMultiChunk(byte[] multiChunkId) {
+    public IMultiChunkEntry getMultiChunk(byte[] multiChunkId) {
     	return multiChunks.get(new ByteArray(multiChunkId));
     }
     
     /**
      * Get a multichunk that this chunk is contained in.
      */
-    public MultiChunkEntry getMultiChunk(ChunkEntryId chunk) {
+    public IMultiChunkEntry getMultiChunk(ChunkEntryId chunk) {
     	return chunkMultiChunkCache.get(chunk);
     }
     
     /**
      * Get all multichunks in this database version.
      */
-    public Collection<MultiChunkEntry> getMultiChunks() {
+    public Collection<IMultiChunkEntry> getMultiChunks() {
         return multiChunks.values();
     }
 	
 	// Content
 
-	public FileContent getFileContent(byte[] checksum) {
+	public IFileContent getFileContent(byte[] checksum) {
 		return fileContents.get(new ByteArray(checksum));
 	}
 
-	public void addFileContent(FileContent content) {
+	public void addFileContent(IFileContent content) {
 		fileContents.put(new ByteArray(content.getChecksum()), content);
 	}
 
-	public Collection<FileContent> getFileContents() {
+	public Collection<IFileContent> getFileContents() {
 		return fileContents.values();
 	}
 	
     // History
     
-    public void addFileHistory(PartialFileHistory history) {
+    public void addFileHistory(IPartialFileHistory history) {
         fileHistories.put(history.getFileId(), history);
     }
     
-    public PartialFileHistory getFileHistory(long fileId) {
+    public IPartialFileHistory getFileHistory(long fileId) {
         return fileHistories.get(fileId);
     }
         
-    public Collection<PartialFileHistory> getFileHistories() {
+    public Collection<IPartialFileHistory> getFileHistories() {
         return fileHistories.values();
     }  
     
-    public void addFileVersionToHistory(long fileHistoryID, FileVersion fileVersion) {
+    public void addFileVersionToHistory(long fileHistoryID, IFileVersion fileVersion) {
     	fileHistories.get(fileHistoryID).addFileVersion(fileVersion);
     }  
     
@@ -182,5 +195,6 @@ public class DatabaseVersion {
 	public String toString() {
 		return "DatabaseVersion [header=" + header + ", chunks=" + chunks.size() + ", multiChunks=" + multiChunks.size() + ", fileContents=" + fileContents.size()
 				+ ", fileHistories=" + fileHistories.size() + "]";
-	}    
+	}
+
 }

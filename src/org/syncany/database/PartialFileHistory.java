@@ -22,6 +22,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.syncany.database.persistence.IFileVersion;
+import org.syncany.database.persistence.IPartialFileHistory;
+
 /**
  * A <tt>PartialFileHistory</tt> represents a single file in a repository over a 
  * certain period of time/versions. Whenever a file is updated or deleted, a new  
@@ -37,33 +40,33 @@ import java.util.TreeMap;
  * @see FileVersion
  * @author Philipp C. Heckel <philipp.heckel@gmail.com>
  */
-public class PartialFileHistory {
+public class PartialFileHistory implements IPartialFileHistory {
 	//TODO [medium] switch to a 128 or 160 bit id to limit the collision risk
     private Long fileId;
-    private TreeMap<Long, FileVersion> versions;
+    private TreeMap<Long, IFileVersion> versions;
     
     public PartialFileHistory(long fileId) {
         this.fileId = fileId;
-        this.versions = new TreeMap<Long, FileVersion>();    	
+        this.versions = new TreeMap<Long, IFileVersion>();    	
     }
 
     public Long getFileId() {
         return fileId;
     }
 
-    /* package */  void setFileId(Long fileId) {
+    public void setFileId(Long fileId) {
         this.fileId = fileId;
     }
 
-    public Map<Long, FileVersion> getFileVersions() {
+    public Map<Long, IFileVersion> getFileVersions() {
         return Collections.unmodifiableMap(versions);
     }
     
-    public FileVersion getFileVersion(long version) {
+    public IFileVersion getFileVersion(long version) {
     	return versions.get(version);
     }
     
-    public FileVersion getLastVersion() {
+    public IFileVersion getLastVersion() {
         if (versions.isEmpty()) {
             return null;
         }
@@ -80,7 +83,7 @@ public class PartialFileHistory {
     	return Collections.unmodifiableSet(versions.descendingKeySet()).iterator();
     }
     
-    public void addFileVersion(FileVersion fileVersion) {
+    public void addFileVersion(IFileVersion fileVersion) {
         versions.put(fileVersion.getVersion(), fileVersion);        
     }
     

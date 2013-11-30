@@ -9,10 +9,10 @@ import java.util.List;
 import java.util.Random;
 
 import org.junit.Test;
+import org.syncany.database.ChunkEntry.ChunkEntryId;
 import org.syncany.database.VectorClock;
 import org.syncany.database.dao.DAO;
 import org.syncany.database.persistence.ChunkEntity;
-import org.syncany.database.persistence.ChunkEntry.ChunkEntryId;
 import org.syncany.database.persistence.DatabaseVersionEntity;
 import org.syncany.database.persistence.DatabaseVersionHeaderEntity;
 import org.syncany.database.persistence.FileContentEntity;
