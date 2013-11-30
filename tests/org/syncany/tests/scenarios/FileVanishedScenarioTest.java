@@ -29,9 +29,9 @@ import java.util.logging.Logger;
 
 import org.junit.Test;
 import org.syncany.connection.plugins.Connection;
-import org.syncany.database.Database;
-import org.syncany.database.persistence.IFileVersion.FileStatus;
-import org.syncany.database.persistence.IPartialFileHistory;
+import org.syncany.database.PartialFileHistory;
+import org.syncany.database.FileVersion.FileStatus;
+import org.syncany.database.mem.MemDatabase;
 import org.syncany.tests.util.TestClient;
 import org.syncany.tests.util.TestConfigUtil;
 
@@ -105,7 +105,7 @@ public class FileVanishedScenarioTest {
 		deleteFilesThread.join();
 		
 		// Test 1: There should be between 50 and 100 file histories in the database
-		Database databaseClientA = clientA.loadLocalDatabase();
+		MemDatabase databaseClientA = clientA.loadLocalDatabase();
 		
 		assertTrue("There should be less file histories than originally added files.", databaseClientA.getFileHistories().size() < numFiles);
 		assertTrue("There should be more (or equal size) file histories than files there are.", databaseClientA.getFileHistories().size() >= numFilesRemaining);
@@ -156,10 +156,10 @@ public class FileVanishedScenarioTest {
 		clientB.cleanup();
 	}
 	
-	private int getNumNotDeletedFileHistories(Database db) {
+	private int getNumNotDeletedFileHistories(MemDatabase db) {
 		int numNotDeletedFileHistories = 0;
 		
-		for (IPartialFileHistory fileHistory : db.getFileHistories()) {
+		for (PartialFileHistory fileHistory : db.getFileHistories()) {
 			if (fileHistory.getLastVersion().getStatus() != FileStatus.DELETED) {
 				numNotDeletedFileHistories++;
 			}

@@ -1,4 +1,4 @@
-package org.syncany.database.persistence;
+package org.syncany.database.sql;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -7,10 +7,11 @@ import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Transient;
 
+import org.syncany.database.DatabaseVersionHeader;
 import org.syncany.database.VectorClock;
 
 @Embeddable
-public class DatabaseVersionHeaderEntity implements Serializable, IDatabaseVersionHeader {
+public class SqlDatabaseVersionHeaderEntity implements Serializable, DatabaseVersionHeader {
 
 	private static final long serialVersionUID = 1L;
 	
@@ -27,7 +28,7 @@ public class DatabaseVersionHeaderEntity implements Serializable, IDatabaseVersi
 	@Column(name = "client", nullable = false)
 	private String client;
         
-    public DatabaseVersionHeaderEntity() {
+    public SqlDatabaseVersionHeaderEntity() {
     	this.date = new Date();
     	this.vectorClock = new VectorClock();
     	this.vectorClockEncoded = "";
@@ -86,7 +87,7 @@ public class DatabaseVersionHeaderEntity implements Serializable, IDatabaseVersi
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		DatabaseVersionHeaderEntity other = (DatabaseVersionHeaderEntity) obj;
+		SqlDatabaseVersionHeaderEntity other = (SqlDatabaseVersionHeaderEntity) obj;
 		if (date == null) {
 			if (other.date != null)
 				return false;

@@ -24,12 +24,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.syncany.config.Config;
-import org.syncany.database.Database;
 import org.syncany.database.FileVersionComparator;
+import org.syncany.database.FileVersion;
+import org.syncany.database.PartialFileHistory;
 import org.syncany.database.FileVersionComparator.FileChange;
 import org.syncany.database.FileVersionComparator.FileVersionComparison;
-import org.syncany.database.persistence.IFileVersion;
-import org.syncany.database.persistence.IPartialFileHistory;
+import org.syncany.database.mem.MemDatabase;
 import org.syncany.operations.DownOperation.DownOperationResult;
 import org.syncany.operations.actions.ChangeFileSystemAction;
 import org.syncany.operations.actions.DeleteFileSystemAction;
@@ -123,30 +123,30 @@ public class FileSystemActionReconciliator {
 	private static final Logger logger = Logger.getLogger(FileSystemActionReconciliator.class.getSimpleName());
 
 	private Config config; 
-	private Database localDatabase; 
+	private MemDatabase localDatabase; 
 	private ChangeSet changeSet;
 	
-	public FileSystemActionReconciliator(Config config, Database localDatabase, DownOperationResult result) {
+	public FileSystemActionReconciliator(Config config, MemDatabase localDatabase, DownOperationResult result) {
 		this.config = config; 
 		this.localDatabase = localDatabase;
 		this.changeSet = result.getChangeSet();
 	}
 	
-	public List<FileSystemAction> determineFileSystemActions(Database winnersDatabase) throws Exception {
+	public List<FileSystemAction> determineFileSystemActions(MemDatabase winnersDatabase) throws Exception {
 		FileVersionComparator fileVersionHelper = new FileVersionComparator(config.getLocalDir(), config.getChunker().getChecksumAlgorithm());
 		List<FileSystemAction> fileSystemActions = new ArrayList<FileSystemAction>();
 		
 		logger.log(Level.INFO, "- Determine filesystem actions ...");
 		
-		for (IPartialFileHistory winningFileHistory : winnersDatabase.getFileHistories()) {
+		for (PartialFileHistory winningFileHistory : winnersDatabase.getFileHistories()) {
 			// Get remote file version and content
-			IFileVersion winningLastVersion = winningFileHistory.getLastVersion();			
+			FileVersion winningLastVersion = winningFileHistory.getLastVersion();			
 			File winningLastFile = new File(config.getLocalDir()+File.separator+winningLastVersion.getPath());
 			
 			// Get local file version and content
-			IPartialFileHistory localFileHistory = localDatabase.getFileHistory(winningFileHistory.getFileId());
+			PartialFileHistory localFileHistory = localDatabase.getFileHistory(winningFileHistory.getFileId());
 			
-			IFileVersion localLastVersion = (localFileHistory != null) ? localFileHistory.getLastVersion() : null;
+			FileVersion localLastVersion = (localFileHistory != null) ? localFileHistory.getLastVersion() : null;
 			File localLastFile = (localLastVersion != null) ? new File(config.getLocalDir()+File.separator+localLastVersion.getPath()) : null;
 			
 			logger.log(Level.INFO, "   + Comparing local version: "+localLastVersion);			

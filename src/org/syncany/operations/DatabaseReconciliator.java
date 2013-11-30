@@ -32,23 +32,23 @@ import java.util.TreeMap;
 import org.syncany.database.Branch;
 import org.syncany.database.Branch.BranchIterator;
 import org.syncany.database.Branches;
-import org.syncany.database.Database;
-import org.syncany.database.DatabaseVersion;
 import org.syncany.database.DatabaseVersionHeader;
 import org.syncany.database.VectorClock;
 import org.syncany.database.VectorClock.VectorClockComparison;
-import org.syncany.database.persistence.IDatabaseVersionHeader;
+import org.syncany.database.mem.MemDatabase;
+import org.syncany.database.mem.MemDatabaseVersion;
+import org.syncany.database.mem.MemDatabaseVersionHeader;
 
 /**
  * The database reconciliator implements various parts of the sync down algorithm (see also:
  * {@link DownOperation}). Its main responsibility is to compare the local database to the
  * other clients' delta databases. The final goal of the algorithms described in this class is
- * to determine a winning {@link Database} (or better: a winning database {@link Branch}) of
+ * to determine a winning {@link MemDatabase} (or better: a winning database {@link Branch}) of
  * a client.
  * 
  * <p>All algorithm parts largely rely on the comparison of a client's database branch, i.e. its
- * committed set of {@link DatabaseVersion}s. Instead of comparing the entire database versions
- * of the different clients, however, the comparisons solely rely on the  {@link DatabaseVersionHeader}s.
+ * committed set of {@link MemDatabaseVersion}s. Instead of comparing the entire database versions
+ * of the different clients, however, the comparisons solely rely on the  {@link MemDatabaseVersionHeader}s.
  * In particular, most of them only compare the {@link VectorClock}. If the vector clocks are 
  * in conflict (= simultaneous), the local timestamp is used as a final decision (oldest wins).
  * 
@@ -94,8 +94,8 @@ import org.syncany.database.persistence.IDatabaseVersionHeader;
  *  <li>{@link #findLastCommonDatabaseVersionHeader(Branch, Branches) findLastCommonDatabaseVersionHeader()}:
  *      Once the full database branches have been stitched together, the algorithm must determine whether there
  *      are any conflicts between the clients' branches. As a first step, a last common 
- *      {@link DatabaseVersionHeader} is determined, i.e. a header that all clients share.</li>
- *  <li>{@link #findFirstConflictingDatabaseVersionHeader(DatabaseVersionHeader, Branches) findFirstConflictingDatabaseVersionHeader()}:
+ *      {@link MemDatabaseVersionHeader} is determined, i.e. a header that all clients share.</li>
+ *  <li>{@link #findFirstConflictingDatabaseVersionHeader(MemDatabaseVersionHeader, Branches) findFirstConflictingDatabaseVersionHeader()}:
  *      By definition, the first conflicting database version between the clients is the database version
  *      following the last common version (= last common database version + 1).</li>
  *  <li>{@link #findWinningFirstConflictingDatabaseVersionHeaders(TreeMap) findWinningFirstConflictingDatabaseVersionHeaders()}:
@@ -116,11 +116,11 @@ import org.syncany.database.persistence.IDatabaseVersionHeader;
 public class DatabaseReconciliator {
 	//private static final Logger logger = Logger.getLogger(DatabaseReconciliator.class.getSimpleName());
 	
-	public IDatabaseVersionHeader findLastCommonDatabaseVersionHeader(Branch localBranch, Branches remoteBranches) {
-		IDatabaseVersionHeader lastCommonDatabaseVersionHeader = null;
+	public DatabaseVersionHeader findLastCommonDatabaseVersionHeader(Branch localBranch, Branches remoteBranches) {
+		DatabaseVersionHeader lastCommonDatabaseVersionHeader = null;
 		
 		for (BranchIterator localBranchIterator = localBranch.iteratorLast(); localBranchIterator.hasPrevious(); ) {
-			IDatabaseVersionHeader currentLocalDatabaseVersionHeader = localBranchIterator.previous();
+			DatabaseVersionHeader currentLocalDatabaseVersionHeader = localBranchIterator.previous();
 			VectorClock currentVectorClock = currentLocalDatabaseVersionHeader.getVectorClock();
 
 			if (isKeyInAllRemoteDatabasesGreaterOrEqual(currentVectorClock, remoteBranches)) {
@@ -139,7 +139,7 @@ public class DatabaseReconciliator {
 		for (String currentRemoteClient : remoteClients) {
 			Branch remoteBranch = remoteDatabaseVersionHeaders.getBranch(currentRemoteClient);
 
-			for (IDatabaseVersionHeader remoteDatabaseVersionHeader : remoteBranch.getAll()) {
+			for (DatabaseVersionHeader remoteDatabaseVersionHeader : remoteBranch.getAll()) {
 				VectorClock remoteVectorClock = remoteDatabaseVersionHeader.getVectorClock();
 				VectorClockComparison result = VectorClock.compare(remoteVectorClock, currentVectorClock);
 				if (result == VectorClockComparison.GREATER || result == VectorClockComparison.EQUAL) {
@@ -173,18 +173,18 @@ public class DatabaseReconciliator {
 		return true;
 	}
 
-	public TreeMap<String, IDatabaseVersionHeader> findFirstConflictingDatabaseVersionHeader(IDatabaseVersionHeader lastCommonHeader, Branches allDatabaseVersionHeaders) {
-		TreeMap<String, IDatabaseVersionHeader> firstConflictingDatabaseVersionHeaders = new TreeMap<String, IDatabaseVersionHeader>();
+	public TreeMap<String, DatabaseVersionHeader> findFirstConflictingDatabaseVersionHeader(DatabaseVersionHeader lastCommonHeader, Branches allDatabaseVersionHeaders) {
+		TreeMap<String, DatabaseVersionHeader> firstConflictingDatabaseVersionHeaders = new TreeMap<String, DatabaseVersionHeader>();
 		
 		nextClient:	for (String remoteMachineName : allDatabaseVersionHeaders.getClients()) {
 			Branch branch = allDatabaseVersionHeaders.getBranch(remoteMachineName);
 			
-			for (Iterator<IDatabaseVersionHeader> i = branch.iteratorFirst(); i.hasNext(); ) {
-				IDatabaseVersionHeader thisDatabaseVersionHeader = i.next();
+			for (Iterator<DatabaseVersionHeader> i = branch.iteratorFirst(); i.hasNext(); ) {
+				DatabaseVersionHeader thisDatabaseVersionHeader = i.next();
 				
 				if (thisDatabaseVersionHeader.equals(lastCommonHeader)) {
 					if (i.hasNext()) {
-						IDatabaseVersionHeader firstConflictingInBranch = i.next();
+						DatabaseVersionHeader firstConflictingInBranch = i.next();
 						firstConflictingDatabaseVersionHeaders.put(remoteMachineName, firstConflictingInBranch);
 					}
 					else {
@@ -197,7 +197,7 @@ public class DatabaseReconciliator {
 
 			// Last common header not found; Add first as conflict			
 			if (branch.size() > 0) {
-				IDatabaseVersionHeader firstConflictingInBranch = branch.get(0);
+				DatabaseVersionHeader firstConflictingInBranch = branch.get(0);
 				firstConflictingDatabaseVersionHeaders.put(remoteMachineName, firstConflictingInBranch);
 			}
 		}
@@ -205,13 +205,13 @@ public class DatabaseReconciliator {
 		return firstConflictingDatabaseVersionHeaders;
 	}
 	
-	public TreeMap<String, IDatabaseVersionHeader> findWinningFirstConflictingDatabaseVersionHeaders(
-			TreeMap<String, IDatabaseVersionHeader> firstConflictingDatabaseVersionHeaders) {
-		IDatabaseVersionHeader winningFirstConflictingDatabaseVersionHeader = null;
+	public TreeMap<String, DatabaseVersionHeader> findWinningFirstConflictingDatabaseVersionHeaders(
+			TreeMap<String, DatabaseVersionHeader> firstConflictingDatabaseVersionHeaders) {
+		DatabaseVersionHeader winningFirstConflictingDatabaseVersionHeader = null;
 
 		// Compare all first conflicting ones and take the one with the EARLIEST
 		// timestamp
-		for (IDatabaseVersionHeader databaseVersionHeader : firstConflictingDatabaseVersionHeaders.values()) {
+		for (DatabaseVersionHeader databaseVersionHeader : firstConflictingDatabaseVersionHeaders.values()) {
 			if (winningFirstConflictingDatabaseVersionHeader == null) {
 				winningFirstConflictingDatabaseVersionHeader = databaseVersionHeader;
 			} else if (databaseVersionHeader.getDate().before(winningFirstConflictingDatabaseVersionHeader.getDate())) {
@@ -221,9 +221,9 @@ public class DatabaseReconciliator {
 
 		// Find all first conflicting entries with the SAME timestamp as the
 		// EARLIEST one (= multiple winning entries possible)
-		TreeMap<String, IDatabaseVersionHeader> winningFirstConflictingDatabaseVersionHeaders = new TreeMap<String, IDatabaseVersionHeader>();
+		TreeMap<String, DatabaseVersionHeader> winningFirstConflictingDatabaseVersionHeaders = new TreeMap<String, DatabaseVersionHeader>();
 
-		for (Map.Entry<String, IDatabaseVersionHeader> entry : firstConflictingDatabaseVersionHeaders.entrySet()) {
+		for (Map.Entry<String, DatabaseVersionHeader> entry : firstConflictingDatabaseVersionHeaders.entrySet()) {
 			if (winningFirstConflictingDatabaseVersionHeader.equals(entry.getValue())) {
 				winningFirstConflictingDatabaseVersionHeaders.put(entry.getKey(), entry.getValue());
 			}
@@ -232,12 +232,12 @@ public class DatabaseReconciliator {
 		// If any, find entries that are GREATER than the winners (= successors)
 		// TODO [low] Implementation not understandable and ugly
 		List<String> removeWinners = new ArrayList<String>();
-		TreeMap<String, IDatabaseVersionHeader> addWinners = new TreeMap<String, IDatabaseVersionHeader>();
+		TreeMap<String, DatabaseVersionHeader> addWinners = new TreeMap<String, DatabaseVersionHeader>();
 
-		for (Map.Entry<String, IDatabaseVersionHeader> winningEntry : winningFirstConflictingDatabaseVersionHeaders.entrySet()) {
-			for (Map.Entry<String, IDatabaseVersionHeader> aFirstConflictingEntry : firstConflictingDatabaseVersionHeaders.entrySet()) {
-				IDatabaseVersionHeader winningDatabaseVersionHeader = winningEntry.getValue();
-				IDatabaseVersionHeader aFirstConflictingDatabaseVersionHeader = aFirstConflictingEntry.getValue();
+		for (Map.Entry<String, DatabaseVersionHeader> winningEntry : winningFirstConflictingDatabaseVersionHeaders.entrySet()) {
+			for (Map.Entry<String, DatabaseVersionHeader> aFirstConflictingEntry : firstConflictingDatabaseVersionHeaders.entrySet()) {
+				DatabaseVersionHeader winningDatabaseVersionHeader = winningEntry.getValue();
+				DatabaseVersionHeader aFirstConflictingDatabaseVersionHeader = aFirstConflictingEntry.getValue();
 
 				if (!winningDatabaseVersionHeader.equals(aFirstConflictingDatabaseVersionHeader)) {
 					VectorClockComparison aFirstConflictingDatabaseVersionHeaderIs = VectorClock.compare(
@@ -262,15 +262,15 @@ public class DatabaseReconciliator {
 		return winningFirstConflictingDatabaseVersionHeaders;
 	}
 
-	public Map.Entry<String, IDatabaseVersionHeader> findWinnersWinnersLastDatabaseVersionHeader(
-			TreeMap<String, IDatabaseVersionHeader> winningFirstConflictingDatabaseVersionHeaders,
+	public Map.Entry<String, DatabaseVersionHeader> findWinnersWinnersLastDatabaseVersionHeader(
+			TreeMap<String, DatabaseVersionHeader> winningFirstConflictingDatabaseVersionHeaders,
 			Branches allDatabaseVersionHeaders) throws Exception {
 
 		if (winningFirstConflictingDatabaseVersionHeaders.size() == 1) {
 			String winningMachineName = winningFirstConflictingDatabaseVersionHeaders.firstKey();
-			IDatabaseVersionHeader winnersWinnersLastDatabaseVersionHeader = allDatabaseVersionHeaders.getBranch(winningMachineName).getLast();
+			DatabaseVersionHeader winnersWinnersLastDatabaseVersionHeader = allDatabaseVersionHeaders.getBranch(winningMachineName).getLast();
 
-			return new AbstractMap.SimpleEntry<String, IDatabaseVersionHeader>(winningMachineName, winnersWinnersLastDatabaseVersionHeader);
+			return new AbstractMap.SimpleEntry<String, DatabaseVersionHeader>(winningMachineName, winnersWinnersLastDatabaseVersionHeader);
 		}
 
 		// Algorithm:
@@ -281,11 +281,11 @@ public class DatabaseReconciliator {
 		Map<String, Integer> machineBranchPositionIterator = new HashMap<String, Integer>();
 
 		for (String machineName : winningFirstConflictingDatabaseVersionHeaders.keySet()) {
-			IDatabaseVersionHeader machineWinnersWinner = winningFirstConflictingDatabaseVersionHeaders.get(machineName);
+			DatabaseVersionHeader machineWinnersWinner = winningFirstConflictingDatabaseVersionHeaders.get(machineName);
 			Branch machineBranch = allDatabaseVersionHeaders.getBranch(machineName);
 
 			for (int i=0; i<machineBranch.size(); i++) {
-				IDatabaseVersionHeader machineDatabaseVersionHeader = machineBranch.get(i);
+				DatabaseVersionHeader machineDatabaseVersionHeader = machineBranch.get(i);
 				
 				if (machineWinnersWinner.equals(machineDatabaseVersionHeader)) {
 					machineBranchPositionIterator.put(machineName, i);
@@ -299,7 +299,7 @@ public class DatabaseReconciliator {
 
 		while (machineInRaceCount > 1) {
 			String currentComparisonMachineName = null;
-			IDatabaseVersionHeader currentComparisonDatabaseVersionHeader = null;
+			DatabaseVersionHeader currentComparisonDatabaseVersionHeader = null;
 
 			for (Map.Entry<String, Integer> machineBranchPosition : machineBranchPositionIterator.entrySet()) {
 				String machineName = machineBranchPosition.getKey();
@@ -319,7 +319,7 @@ public class DatabaseReconciliator {
 					continue;
 				}
 
-				IDatabaseVersionHeader currentMachineDatabaseVersionHeader = machineDatabaseVersionHeaders.get(machinePosition);;
+				DatabaseVersionHeader currentMachineDatabaseVersionHeader = machineDatabaseVersionHeaders.get(machinePosition);;
 				
 				if (currentComparisonDatabaseVersionHeader == null) {
 					currentComparisonMachineName = machineName;
@@ -384,8 +384,8 @@ public class DatabaseReconciliator {
 			Integer machineCurrentKey = machineBranchPositionIterator.get(machineName);
 
 			if (machineCurrentKey != null) {
-				IDatabaseVersionHeader winnersWinnersLastDatabaseVersionHeader = allDatabaseVersionHeaders.getBranch(machineName).getLast();
-				return new AbstractMap.SimpleEntry<String, IDatabaseVersionHeader>(machineName, winnersWinnersLastDatabaseVersionHeader);
+				DatabaseVersionHeader winnersWinnersLastDatabaseVersionHeader = allDatabaseVersionHeaders.getBranch(machineName).getLast();
+				return new AbstractMap.SimpleEntry<String, DatabaseVersionHeader>(machineName, winnersWinnersLastDatabaseVersionHeader);
 			}
 		}
 
@@ -397,7 +397,7 @@ public class DatabaseReconciliator {
 		
 		mergeLocalBranchInRemoteBranches(localClientName, allBranches, localBranch);
 		
-		Set<IDatabaseVersionHeader> allHeaders = gatherAllDatabaseVersionHeaders(allBranches);
+		Set<DatabaseVersionHeader> allHeaders = gatherAllDatabaseVersionHeaders(allBranches);
 		
 		completeBranchesWithDatabaseVersionHeaders(allBranches, allHeaders);
 		
@@ -408,7 +408,7 @@ public class DatabaseReconciliator {
 		if(allBranches.getClients().contains(localClientName)) {
 			Branch unknownLocalClientBranch = allBranches.getBranch(localClientName);
 			
-			for (IDatabaseVersionHeader header : localBranch.getAll()) {
+			for (DatabaseVersionHeader header : localBranch.getAll()) {
 				if (unknownLocalClientBranch.get(header.getVectorClock()) == null) {
 					unknownLocalClientBranch.add(header);
 				}
@@ -421,13 +421,13 @@ public class DatabaseReconciliator {
 		}
 	}
 	
-	private Set<IDatabaseVersionHeader> gatherAllDatabaseVersionHeaders(Branches allBranches) {
-		Set<IDatabaseVersionHeader> allHeaders = new HashSet<IDatabaseVersionHeader>();
+	private Set<DatabaseVersionHeader> gatherAllDatabaseVersionHeaders(Branches allBranches) {
+		Set<DatabaseVersionHeader> allHeaders = new HashSet<DatabaseVersionHeader>();
 		
 		for (String client : allBranches.getClients()) {
 			Branch clientBranch = allBranches.getBranch(client);
 			
-			for (IDatabaseVersionHeader databaseVersionHeader : clientBranch.getAll()) {
+			for (DatabaseVersionHeader databaseVersionHeader : clientBranch.getAll()) {
 				allHeaders.add(databaseVersionHeader);
 			}
 		}
@@ -435,13 +435,13 @@ public class DatabaseReconciliator {
 		return allHeaders;
 	}
 
-	private void completeBranchesWithDatabaseVersionHeaders(Branches allBranches, Set<IDatabaseVersionHeader> allHeaders) {
+	private void completeBranchesWithDatabaseVersionHeaders(Branches allBranches, Set<DatabaseVersionHeader> allHeaders) {
 		for (String client : allBranches.getClients()) {
 			Branch clientBranch = allBranches.getBranch(client);
 			if(clientBranch.size() > 0) {
 				VectorClock lastVectorClock = clientBranch.getLast().getVectorClock();
 				
-				for (IDatabaseVersionHeader databaseVersionHeader : allHeaders) {
+				for (DatabaseVersionHeader databaseVersionHeader : allHeaders) {
 					VectorClock currentVectorClock = databaseVersionHeader.getVectorClock();
 					boolean isCurrentVectorClockSmaller = VectorClock.compare(currentVectorClock, lastVectorClock) == VectorClockComparison.SMALLER;
 					boolean currentVectorClockExistsInBranch = clientBranch.get(currentVectorClock) != null;
@@ -459,17 +459,17 @@ public class DatabaseReconciliator {
 	}
 
 	private Branch sortBranch(Branch clientBranch) {
-		List<IDatabaseVersionHeader> branchCopy = new ArrayList<IDatabaseVersionHeader>(clientBranch.getAll());
+		List<DatabaseVersionHeader> branchCopy = new ArrayList<DatabaseVersionHeader>(clientBranch.getAll());
 		Collections.sort(branchCopy, new DatabaseVersionHeaderComparator());
 		Branch sortedBranch = new Branch();
 		sortedBranch.addAll(branchCopy);
 		return sortedBranch;
 	}
 	
-    private class DatabaseVersionHeaderComparator implements Comparator<IDatabaseVersionHeader> {
+    private class DatabaseVersionHeaderComparator implements Comparator<DatabaseVersionHeader> {
 
         @Override
-        public int compare(IDatabaseVersionHeader o1, IDatabaseVersionHeader o2) {
+        public int compare(DatabaseVersionHeader o1, DatabaseVersionHeader o2) {
             VectorClockComparison vectorClockComparison = VectorClock.compare(o1.getVectorClock(), o2.getVectorClock());
            
             if (vectorClockComparison == VectorClockComparison.SIMULTANEOUS) {

@@ -18,7 +18,7 @@
 package org.syncany.operations;
 
 import org.syncany.config.Config;
-import org.syncany.database.Database;
+import org.syncany.database.mem.MemDatabase;
 import org.syncany.operations.DownOperation.DownOperationOptions;
 import org.syncany.operations.DownOperation.DownOperationResult;
 import org.syncany.operations.UpOperation.UpOperationOptions;
@@ -32,14 +32,14 @@ import org.syncany.operations.UpOperation.UpOperationResult;
  * @author Philipp C. Heckel <philipp.heckel@gmail.com>
  */
 public class SyncOperation extends Operation {
-	private Database loadedDatabase;
+	private MemDatabase loadedDatabase;
 	private SyncOperationOptions options;
 	
 	public SyncOperation(Config config) {
 		this(config, null, new SyncOperationOptions());
 	}	
 	
-	public SyncOperation(Config config, Database database, SyncOperationOptions options) {
+	public SyncOperation(Config config, MemDatabase database, SyncOperationOptions options) {
 		super(config);		
 		
 		this.loadedDatabase = database;

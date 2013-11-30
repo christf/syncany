@@ -22,11 +22,11 @@ import java.util.logging.Level;
 
 import org.apache.commons.io.FileUtils;
 import org.syncany.config.Config;
-import org.syncany.database.Database;
-import org.syncany.database.persistence.IFileVersion;
+import org.syncany.database.FileVersion;
+import org.syncany.database.mem.MemDatabase;
 
 public class RenameFileSystemAction extends FileSystemAction {
-	public RenameFileSystemAction(Config config, IFileVersion from, IFileVersion to, Database localDatabase, Database winningDatabase) {
+	public RenameFileSystemAction(Config config, FileVersion from, FileVersion to, MemDatabase localDatabase, MemDatabase winningDatabase) {
 		super(config, localDatabase, winningDatabase, from, to);
 	}
 

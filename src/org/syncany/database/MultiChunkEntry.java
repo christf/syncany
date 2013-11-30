@@ -17,80 +17,23 @@
  */
 package org.syncany.database;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-import org.syncany.database.ChunkEntry.ChunkEntryId;
-import org.syncany.database.persistence.IMultiChunkEntry;
-import org.syncany.util.StringUtil;
+import org.syncany.database.mem.MemChunkEntry.ChunkEntryId;
+
 
 /**
- * The multichunk entry represents the chunk container in which a set of 
- * {@link ChunkEntry}s is stored. On a file, level, a multichunk is represented
- * by a file (container format) and chunks are added to this file.
- * 
- * <p>A multichunk is identified by a unique identifier (random, not a checksum),
- * and contains references to {@link ChunkEntry}s. 
- * 
- * @author Philipp C. Heckel <philipp.heckel@gmail.com>
+ *
+ * @author pheckel
  */
-public class MultiChunkEntry implements IMultiChunkEntry {
-    private byte[] id;    
-    private List<ChunkEntryId> chunks;
+public interface MultiChunkEntry  {
         
-    public MultiChunkEntry(byte[] id) {
-        this.chunks = new ArrayList<ChunkEntryId>();
-        this.id = id;
-    }
-    
-    public void addChunk(ChunkEntryId chunk) {
-        chunks.add(chunk);
-    }    
+    public void addChunk(ChunkEntryId chunk);
 
-    public byte[] getId() {
-        return id;
-    }
+    public byte[] getId();
 
-    public void setId(byte[] id) {
-        this.id = id;
-    }
+    public void setId(byte[] id);
 
-    public List<ChunkEntryId> getChunks() {
-        return chunks;
-    }
-
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + Arrays.hashCode(id);
-		result = prime * result + ((chunks == null) ? 0 : chunks.hashCode());
-		return result;
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		MultiChunkEntry other = (MultiChunkEntry) obj;
-		if (!Arrays.equals(id, other.id))
-			return false;
-		if (chunks == null) {
-			if (other.chunks != null)
-				return false;
-		} else if (!chunks.equals(other.chunks))
-			return false;
-		return true;
-	}
-
-	@Override
-	public String toString() {
-		return "MultiChunkEntry [id=" + StringUtil.toHex(id) + ", chunks=" + chunks + "]";
-	}
+    public List<ChunkEntryId> getChunks();
 
 }

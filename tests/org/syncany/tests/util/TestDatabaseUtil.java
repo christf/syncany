@@ -26,23 +26,23 @@ import java.util.regex.Pattern;
 
 import org.syncany.chunk.Transformer;
 import org.syncany.database.Branch;
-import org.syncany.database.Database;
 import org.syncany.database.DatabaseDAO;
 import org.syncany.database.DatabaseVersion;
 import org.syncany.database.DatabaseVersionHeader;
-import org.syncany.database.FileVersion;
 import org.syncany.database.VectorClock;
-import org.syncany.database.XmlDatabaseDAO;
-import org.syncany.database.persistence.IDatabaseVersion;
-import org.syncany.database.persistence.IDatabaseVersionHeader;
-import org.syncany.database.persistence.IFileVersion.FileStatus;
-import org.syncany.database.persistence.IFileVersion.FileType;
+import org.syncany.database.FileVersion.FileStatus;
+import org.syncany.database.FileVersion.FileType;
+import org.syncany.database.mem.MemDatabase;
+import org.syncany.database.mem.MemDatabaseVersion;
+import org.syncany.database.mem.MemDatabaseVersionHeader;
+import org.syncany.database.mem.MemFileVersion;
+import org.syncany.database.mem.XmlDatabaseDAO;
 
 public class TestDatabaseUtil {
 	private static Pattern databaseVersionHeaderPattern = Pattern.compile("([^/]+)/\\(([^)]+)\\)/T=?(\\d+)");
 	private static Pattern vectorClockElementPattern = Pattern.compile("([^\\d]+)(\\d+)");
 	
-	public static DatabaseVersionHeader createFromString(String databaseVersionHeaderString) throws Exception {
+	public static MemDatabaseVersionHeader createFromString(String databaseVersionHeaderString) throws Exception {
 		Matcher databaseVersionHeaderMatcher = databaseVersionHeaderPattern.matcher(databaseVersionHeaderString);
 		
 		if (!databaseVersionHeaderMatcher.matches()) {
@@ -73,7 +73,7 @@ public class TestDatabaseUtil {
 			vectorClock.setClock(vectorClockMachineName, vectorClockTime);
 		}
 		
-		DatabaseVersionHeader newDatabaseVersionHeader = new DatabaseVersionHeader();
+		MemDatabaseVersionHeader newDatabaseVersionHeader = new MemDatabaseVersionHeader();
 		
 		newDatabaseVersionHeader.setDate(new Date(databaseVersionHeaderTime));
 		newDatabaseVersionHeader.setVectorClock(vectorClock);
@@ -82,12 +82,12 @@ public class TestDatabaseUtil {
 		return newDatabaseVersionHeader;
 	}
 	
-	public static TreeMap<String, IDatabaseVersionHeader> createMapWithMachineKey(String[] keysAndDatabaseVersionHeaderStrings) throws Exception {
-		TreeMap<String, IDatabaseVersionHeader> databaseVersionHeaderMap = new TreeMap<String, IDatabaseVersionHeader>();
+	public static TreeMap<String, DatabaseVersionHeader> createMapWithMachineKey(String[] keysAndDatabaseVersionHeaderStrings) throws Exception {
+		TreeMap<String, DatabaseVersionHeader> databaseVersionHeaderMap = new TreeMap<String, DatabaseVersionHeader>();
 		
 		for (int i=0; i<keysAndDatabaseVersionHeaderStrings.length; i+=2) {			
 			String machineName = keysAndDatabaseVersionHeaderStrings[i];
-			DatabaseVersionHeader databaseVersionHeader = createFromString(keysAndDatabaseVersionHeaderStrings[i+1]);
+			MemDatabaseVersionHeader databaseVersionHeader = createFromString(keysAndDatabaseVersionHeaderStrings[i+1]);
 
 			databaseVersionHeaderMap.put(machineName, databaseVersionHeader);
 		}
@@ -99,15 +99,15 @@ public class TestDatabaseUtil {
 		Branch branch = new Branch();
 		
 		for (String databaseVersionHeaderString : databaseVersionHeaderStrings) {
-			DatabaseVersionHeader databaseVersionHeader = createFromString(databaseVersionHeaderString);
+			MemDatabaseVersionHeader databaseVersionHeader = createFromString(databaseVersionHeaderString);
 			branch.add(databaseVersionHeader);
 		}
 
 		return branch;
 	}
 	
-	public static Database readDatabaseFileFromDisk(File databaseFile, Transformer transformer) throws IOException {
-		Database db = new Database();
+	public static MemDatabase readDatabaseFileFromDisk(File databaseFile, Transformer transformer) throws IOException {
+		MemDatabase db = new MemDatabase();
 		
 		DatabaseDAO dao = new XmlDatabaseDAO(transformer);
 		dao.load(db, databaseFile);
@@ -115,13 +115,13 @@ public class TestDatabaseUtil {
 		return db;
 	}
 	
-	public static void writeDatabaseFileToDisk(Database db, File writtenDatabaseFile, Transformer transformer) throws IOException {
+	public static void writeDatabaseFileToDisk(MemDatabase db, File writtenDatabaseFile, Transformer transformer) throws IOException {
 		DatabaseDAO dao = new XmlDatabaseDAO(transformer);
 		dao.save(db, writtenDatabaseFile);
 	}
 	
-	public static FileVersion createFileVersion(String path) {
-		FileVersion fileVersion = new FileVersion();
+	public static MemFileVersion createFileVersion(String path) {
+		MemFileVersion fileVersion = new MemFileVersion();
 		
 		fileVersion.setChecksum(TestFileUtil.createRandomArray(20));
 		fileVersion.setCreatedBy("A");		
@@ -135,8 +135,8 @@ public class TestDatabaseUtil {
 		return fileVersion;
 	}
 	
-	public static FileVersion createFileVersion(String path, FileVersion basedOnFileVersion) {
-		FileVersion fileVersion = basedOnFileVersion.clone();
+	public static MemFileVersion createFileVersion(String path, MemFileVersion basedOnFileVersion) {
+		MemFileVersion fileVersion = basedOnFileVersion.clone();
 		
 		fileVersion.setPath(path);
 		fileVersion.setStatus(FileStatus.CHANGED);
@@ -148,23 +148,23 @@ public class TestDatabaseUtil {
 	// TODO [medium] Add functionality tests for the rest of the cache
 	// TODO [high] Add performance tests for the cache and optimize Database.addDatabaseVersion()-cache handling
 	
-	public static IDatabaseVersion createDatabaseVersion() {
+	public static DatabaseVersion createDatabaseVersion() {
 		return createDatabaseVersion(null, new Date());
 	}
 	
-	public static IDatabaseVersion createDatabaseVersion(IDatabaseVersion basedOnDatabaseVersion) {
+	public static DatabaseVersion createDatabaseVersion(DatabaseVersion basedOnDatabaseVersion) {
 		return createDatabaseVersion(basedOnDatabaseVersion, new Date());
 	}
 	
-	public static IDatabaseVersion createDatabaseVersion(Date date) {
+	public static DatabaseVersion createDatabaseVersion(Date date) {
 		return createDatabaseVersion(null, date);
 	}
 	
-	public static IDatabaseVersion createDatabaseVersion(IDatabaseVersion basedOnDatabaseVersion, Date date) {
+	public static DatabaseVersion createDatabaseVersion(DatabaseVersion basedOnDatabaseVersion, Date date) {
 		VectorClock vectorClock = (basedOnDatabaseVersion != null) ? basedOnDatabaseVersion.getVectorClock().clone() : new VectorClock();
 		vectorClock.incrementClock("someclient");
 		
-		DatabaseVersion databaseVersion = new DatabaseVersion();
+		MemDatabaseVersion databaseVersion = new MemDatabaseVersion();
 		
 		databaseVersion.setClient("someclient");
 		databaseVersion.setTimestamp(date);

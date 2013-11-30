@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.syncany.database.persistence;
+package org.syncany.database.sql;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -34,7 +34,8 @@ import javax.persistence.Transient;
 import org.hibernate.CallbackException;
 import org.hibernate.Session;
 import org.hibernate.classic.Lifecycle;
-import org.syncany.database.ChunkEntry.ChunkEntryId;
+import org.syncany.database.MultiChunkEntry;
+import org.syncany.database.mem.MemChunkEntry.ChunkEntryId;
 import org.syncany.util.StringUtil;
 
 /**
@@ -43,7 +44,7 @@ import org.syncany.util.StringUtil;
  */
 @Entity
 @Table(name = "MultiChunkEntity")
-public class MultiChunkEntity implements IMultiChunkEntry, Lifecycle{
+public class SqlMultiChunkEntry implements MultiChunkEntry, Lifecycle{
 	
 	@Transient
     private byte[] id;
@@ -55,11 +56,11 @@ public class MultiChunkEntity implements IMultiChunkEntry, Lifecycle{
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     private List<ChunkIdEntity> chunks;
         
-	public MultiChunkEntity() {
+	public SqlMultiChunkEntry() {
         this.chunks = new ArrayList<ChunkIdEntity>();
 	}
 
-	public MultiChunkEntity(byte[] id) {
+	public SqlMultiChunkEntry(byte[] id) {
         this.chunks = new ArrayList<ChunkIdEntity>();
         this.id = id;
 		this.idEncoded = StringUtil.toHex(id);
@@ -128,7 +129,7 @@ public class MultiChunkEntity implements IMultiChunkEntry, Lifecycle{
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		MultiChunkEntity other = (MultiChunkEntity) obj;
+		SqlMultiChunkEntry other = (SqlMultiChunkEntry) obj;
 		if (chunks == null) {
 			if (other.chunks != null)
 				return false;

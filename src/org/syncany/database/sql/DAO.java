@@ -1,4 +1,4 @@
-package org.syncany.database.dao;
+package org.syncany.database.sql;
 
 import java.io.Serializable;
 import java.util.List;
@@ -6,7 +6,6 @@ import java.util.List;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
-import org.syncany.database.persistence.DatabaseVersionEntity;
 import org.syncany.database.util.PersistenceUtil;
 
 public class DAO<T>{
@@ -34,7 +33,7 @@ public class DAO<T>{
 	public T get(Serializable entity) {
 		Session session = PersistenceUtil.getSessionFactory().openSession();
 	
-		T readEntity = (T) session.get(DatabaseVersionEntity.class, entity);
+		T readEntity = (T) session.get(SqlDatabaseVersionEntity.class, entity);
 		session.close();
 		return readEntity;
 	}

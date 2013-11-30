@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.syncany.database;
+package org.syncany.database.mem;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -38,16 +38,19 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
 import org.syncany.chunk.Transformer;
-import org.syncany.database.ChunkEntry.ChunkEntryId;
+import org.syncany.database.DatabaseDAO;
+import org.syncany.database.ChunkEntry;
+import org.syncany.database.Database;
+import org.syncany.database.DatabaseVersion;
+import org.syncany.database.FileContent;
+import org.syncany.database.FileVersion;
+import org.syncany.database.FileVersion.FileStatus;
+import org.syncany.database.FileVersion.FileType;
+import org.syncany.database.MultiChunkEntry;
+import org.syncany.database.PartialFileHistory;
+import org.syncany.database.VectorClock;
 import org.syncany.database.VectorClock.VectorClockComparison;
-import org.syncany.database.persistence.IChunkEntry;
-import org.syncany.database.persistence.IDatabaseVersion;
-import org.syncany.database.persistence.IFileContent;
-import org.syncany.database.persistence.IFileVersion;
-import org.syncany.database.persistence.IFileVersion.FileStatus;
-import org.syncany.database.persistence.IFileVersion.FileType;
-import org.syncany.database.persistence.IMultiChunkEntry;
-import org.syncany.database.persistence.IPartialFileHistory;
+import org.syncany.database.mem.MemChunkEntry.ChunkEntryId;
 import org.syncany.util.FileUtil;
 import org.syncany.util.StringUtil;
 import org.xml.sax.Attributes;
@@ -74,7 +77,7 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 	}
 
 	@Override
-	public void save(Database db, IDatabaseVersion versionFrom, IDatabaseVersion versionTo, File destinationFile) throws IOException {				 
+	public void save(Database db, DatabaseVersion versionFrom, DatabaseVersion versionTo, File destinationFile) throws IOException {				 
 		try {
 			PrintWriter out;
 			
@@ -97,7 +100,7 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 			 
 			xmlOut.writeStartElement("databaseVersions");
 			 			
-			for (IDatabaseVersion databaseVersion : db.getDatabaseVersions()) {
+			for (DatabaseVersion databaseVersion : db.getDatabaseVersions()) {
 				boolean databaseVersionInSaveRange = databaseVersionInRange(databaseVersion, versionFrom, versionTo);
 
 				if (!databaseVersionInSaveRange) {				
@@ -133,7 +136,7 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 		}
 	}			
 
-	private void writeDatabaseVersionHeader(IndentXmlStreamWriter xmlOut, IDatabaseVersion databaseVersion) throws IOException, XMLStreamException {
+	private void writeDatabaseVersionHeader(IndentXmlStreamWriter xmlOut, DatabaseVersion databaseVersion) throws IOException, XMLStreamException {
 		if (databaseVersion.getTimestamp() == null || databaseVersion.getClient() == null
 				|| databaseVersion.getVectorClock() == null || databaseVersion.getVectorClock().isEmpty()) {
 
@@ -162,11 +165,11 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 		xmlOut.writeEndElement(); // </header>	
 	}
 	
-	private void writeChunks(IndentXmlStreamWriter xmlOut, Collection<IChunkEntry> chunks) throws XMLStreamException {
+	private void writeChunks(IndentXmlStreamWriter xmlOut, Collection<ChunkEntry> chunks) throws XMLStreamException {
 		if (chunks.size() > 0) {
 			xmlOut.writeStartElement("chunks");
 								
-			for (IChunkEntry chunk : chunks) {
+			for (ChunkEntry chunk : chunks) {
 				xmlOut.writeEmptyElement("chunk");
 				xmlOut.writeAttribute("checksum", StringUtil.toHex(chunk.getChecksum()));
 				xmlOut.writeAttribute("size", chunk.getSize());
@@ -176,11 +179,11 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 		}		
 	}
 	
-	private void writeMultiChunks(IndentXmlStreamWriter xmlOut, Collection<IMultiChunkEntry> multiChunks) throws XMLStreamException {
+	private void writeMultiChunks(IndentXmlStreamWriter xmlOut, Collection<MultiChunkEntry> multiChunks) throws XMLStreamException {
 		if (multiChunks.size() > 0) {
 			xmlOut.writeStartElement("multiChunks");
 			
-			for (IMultiChunkEntry multiChunk : multiChunks) {
+			for (MultiChunkEntry multiChunk : multiChunks) {
 				xmlOut.writeStartElement("multiChunk");
 				xmlOut.writeAttribute("id", StringUtil.toHex(multiChunk.getId()));
 			
@@ -200,11 +203,11 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 		}
 	}
 	
-	private void writeFileContents(IndentXmlStreamWriter xmlOut, Collection<IFileContent> fileContents) throws XMLStreamException {
+	private void writeFileContents(IndentXmlStreamWriter xmlOut, Collection<FileContent> fileContents) throws XMLStreamException {
 		if (fileContents.size() > 0) {
 			xmlOut.writeStartElement("fileContents");
 			
-			for (IFileContent fileContent : fileContents) {
+			for (FileContent fileContent : fileContents) {
 				xmlOut.writeStartElement("fileContent");
 				xmlOut.writeAttribute("checksum", StringUtil.toHex(fileContent.getChecksum()));
 				xmlOut.writeAttribute("size", fileContent.getSize());
@@ -225,17 +228,17 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 		}		
 	}
 	
-	private void writeFileHistories(IndentXmlStreamWriter xmlOut, Collection<IPartialFileHistory> fileHistories) throws XMLStreamException, IOException {
+	private void writeFileHistories(IndentXmlStreamWriter xmlOut, Collection<PartialFileHistory> fileHistories) throws XMLStreamException, IOException {
 		xmlOut.writeStartElement("fileHistories");
 		
-		for (IPartialFileHistory fileHistory : fileHistories) {
+		for (PartialFileHistory fileHistory : fileHistories) {
 			xmlOut.writeStartElement("fileHistory");
 			xmlOut.writeAttribute("id", fileHistory.getFileId());
 			
 			xmlOut.writeStartElement("fileVersions");
 			
-			Collection<IFileVersion> fileVersions = fileHistory.getFileVersions().values();
-			for (IFileVersion fileVersion : fileVersions) {
+			Collection<FileVersion> fileVersions = fileHistory.getFileVersions().values();
+			for (FileVersion fileVersion : fileVersions) {
 				if (fileVersion.getVersion() == null || fileVersion.getType() == null || fileVersion.getPath() == null 
 						|| fileVersion.getStatus() == null || fileVersion.getSize() == null || fileVersion.getLastModified() == null) {
 					
@@ -318,7 +321,7 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 		return greaterOrEqualToVersionFrom && lowerOrEqualToVersionTo;		
 	}
 	
-	private boolean databaseVersionInRange(IDatabaseVersion databaseVersion, IDatabaseVersion databaseVersionFrom, IDatabaseVersion databaseVersionTo) {
+	private boolean databaseVersionInRange(DatabaseVersion databaseVersion, DatabaseVersion databaseVersionFrom, DatabaseVersion databaseVersionTo) {
 		VectorClock vectorClock = databaseVersion.getVectorClock();
 		VectorClock vectorClockRangeFrom = (databaseVersionFrom != null) ? databaseVersionFrom.getVectorClock() : null;
 		VectorClock vectorClockRangeTo = (databaseVersionTo != null) ? databaseVersionTo.getVectorClock() : null;
@@ -435,12 +438,12 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 		private boolean headersOnly;
 
 		private String elementPath;
-		private IDatabaseVersion databaseVersion;
+		private DatabaseVersion databaseVersion;
 		private VectorClock vectorClock;
 		private boolean vectorClockInLoadRange;
-		private IFileContent fileContent;
-		private IMultiChunkEntry multiChunk;
-		private IPartialFileHistory fileHistory;
+		private FileContent fileContent;
+		private MultiChunkEntry multiChunk;
+		private PartialFileHistory fileHistory;
 		
 		public DatabaseXmlHandler(Database database, VectorClock fromVersion, VectorClock toVersion, boolean headersOnly) {
 			this.elementPath = "";
@@ -457,7 +460,7 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 			//System.out.println(elementPath+" (start) ");
 			
 			if (elementPath.equalsIgnoreCase("/database/databaseVersions/databaseVersion")) {				
-				databaseVersion = new DatabaseVersion();				
+				databaseVersion = new MemDatabaseVersion();				
 			}			
 			else if (elementPath.equalsIgnoreCase("/database/databaseVersions/databaseVersion/header/time")) {
 				Date timeValue = new Date(Long.parseLong(attributes.getValue("value")));
@@ -482,7 +485,7 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 					byte[] chunkChecksum = StringUtil.fromHex(chunkChecksumStr);
 					int chunkSize = Integer.parseInt(attributes.getValue("size"));
 					
-					ChunkEntry chunkEntry = new ChunkEntry(chunkChecksum, chunkSize);
+					MemChunkEntry chunkEntry = new MemChunkEntry(chunkChecksum, chunkSize);
 					databaseVersion.addChunk(chunkEntry);
 				}
 				else if (elementPath.equalsIgnoreCase("/database/databaseVersions/databaseVersion/fileContents/fileContent")) {
@@ -490,7 +493,7 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 					byte[] checksum = StringUtil.fromHex(checksumStr);
 					long size = Long.parseLong(attributes.getValue("size"));
 	
-					fileContent = new FileContent();
+					fileContent = new MemFileContent();
 					fileContent.setChecksum(checksum);
 					fileContent.setSize(size);							
 				}
@@ -508,7 +511,7 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 						throw new SAXException("Cannot read ID from multichunk " + multChunkIdStr);
 					}
 					
-					multiChunk = new MultiChunkEntry(multiChunkId);					
+					multiChunk = new MemMultiChunkEntry(multiChunkId);					
 				}			
 				else if (elementPath.equalsIgnoreCase("/database/databaseVersions/databaseVersion/multiChunks/multiChunk/chunkRefs/chunkRef")) {
 					String chunkChecksumStr = attributes.getValue("ref");
@@ -520,7 +523,7 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 					String fileHistoryIdStr = attributes.getValue("id");
 					Long fileHistoryId = Long.parseLong(fileHistoryIdStr);
 					
-					fileHistory = new PartialFileHistory(fileHistoryId);
+					fileHistory = new MemPartialFileHistory(fileHistoryId);
 				}	
 				else if (elementPath.equalsIgnoreCase("/database/databaseVersions/databaseVersion/fileHistories/fileHistory/fileVersions/fileVersion")) {
 					String fileVersionStr = attributes.getValue("version");
@@ -540,7 +543,7 @@ public class XmlDatabaseDAO implements DatabaseDAO {
 						throw new SAXException("FileVersion: Attributes missing: version, path, type, status, size and last modified are mandatory");
 					}
 					
-					FileVersion fileVersion = new FileVersion();
+					MemFileVersion fileVersion = new MemFileVersion();
 					 
 					fileVersion.setVersion(Long.parseLong(fileVersionStr));
 					fileVersion.setPath(path);

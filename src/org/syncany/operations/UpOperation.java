@@ -37,15 +37,15 @@ import org.syncany.connection.plugins.MultiChunkRemoteFile;
 import org.syncany.connection.plugins.RemoteFile;
 import org.syncany.connection.plugins.StorageException;
 import org.syncany.connection.plugins.TransferManager;
-import org.syncany.database.Database;
 import org.syncany.database.DatabaseDAO;
 import org.syncany.database.DatabaseVersion;
+import org.syncany.database.FileVersion;
+import org.syncany.database.MultiChunkEntry;
+import org.syncany.database.PartialFileHistory;
 import org.syncany.database.VectorClock;
-import org.syncany.database.XmlDatabaseDAO;
-import org.syncany.database.persistence.IDatabaseVersion;
-import org.syncany.database.persistence.IFileVersion;
-import org.syncany.database.persistence.IMultiChunkEntry;
-import org.syncany.database.persistence.IPartialFileHistory;
+import org.syncany.database.mem.MemDatabase;
+import org.syncany.database.mem.MemDatabaseVersion;
+import org.syncany.database.mem.XmlDatabaseDAO;
 import org.syncany.operations.StatusOperation.StatusOperationOptions;
 import org.syncany.operations.StatusOperation.StatusOperationResult;
 import org.syncany.operations.UpOperation.UpOperationResult.UpResultCode;
@@ -61,10 +61,10 @@ import org.syncany.util.StringUtil;
  *   <li>Load local database (if not already loaded)</li>
  *   <li>Analyze local directory using the {@link StatusOperation} to determine any changed/new/deleted files</li>
  *   <li>Determine if there are unknown remote databases using the {@link LsRemoteOperation}, and skip the rest if there are</li>
- *   <li>If there are changes, use the {@link Deduper} and {@link Indexer} to create a new {@link DatabaseVersion} 
+ *   <li>If there are changes, use the {@link Deduper} and {@link Indexer} to create a new {@link MemDatabaseVersion} 
  *       (including new chunks, multichunks, file contents and file versions).</li>
  *   <li>Upload new multichunks (if any) using a {@link TransferManager}</li>
- *   <li>Save new {@link DatabaseVersion} to a new (delta) {@link Database} and upload it</li>
+ *   <li>Save new {@link MemDatabaseVersion} to a new (delta) {@link MemDatabase} and upload it</li>
  *   <li>Add delta database to local database and store it locally</li>
  * </ol>
  * 
@@ -79,18 +79,18 @@ public class UpOperation extends Operation {
 	private UpOperationOptions options;
 	private UpOperationResult result;
 	private TransferManager transferManager; 
-	private Database loadedDatabase;
-	private Database dirtyDatabase;
+	private MemDatabase loadedDatabase;
+	private MemDatabase dirtyDatabase;
 	
 	public UpOperation(Config config) {
 		this(config, null, new UpOperationOptions());
 	}	
 	
-	public UpOperation(Config config, Database database) {
+	public UpOperation(Config config, MemDatabase database) {
 		this(config, database, new UpOperationOptions());
 	}	
 	
-	public UpOperation(Config config, Database database, UpOperationOptions options) {
+	public UpOperation(Config config, MemDatabase database, UpOperationOptions options) {
 		super(config);		
 		
 		this.options = options;
@@ -106,7 +106,7 @@ public class UpOperation extends Operation {
 		logger.log(Level.INFO, "--------------------------------------------");
 		
 		// Load database
-		Database database = (loadedDatabase != null) ? loadedDatabase : loadLocalDatabaseFromSQL();
+		MemDatabase database = (loadedDatabase != null) ? loadedDatabase : loadLocalDatabaseFromSQL();
 		
 		// Load dirty database (if existent) 
 		if (config.getDirtyDatabaseFile().exists()) {
@@ -150,7 +150,7 @@ public class UpOperation extends Operation {
 		statusChangeSet = null; // allow GC to clean up
 		
 		// Index
-		DatabaseVersion newDatabaseVersion = index(locallyUpdatedFiles, database);
+		MemDatabaseVersion newDatabaseVersion = index(locallyUpdatedFiles, database);
 		
 		if (newDatabaseVersion.getFileHistories().size() == 0) {
 			logger.log(Level.INFO, "Local database is up-to-date. NOTHING TO DO!");			
@@ -171,7 +171,7 @@ public class UpOperation extends Operation {
 			DatabaseRemoteFile remoteDeltaDatabaseFile = new DatabaseRemoteFile(config.getMachineName(), newestLocalDatabaseVersion);
 			File localDeltaDatabaseFile = config.getCache().getDatabaseFile(remoteDeltaDatabaseFile.getName());	
 
-			Database newDeltaDatabase = new Database();
+			MemDatabase newDeltaDatabase = new MemDatabase();
 			newDeltaDatabase.addDatabaseVersion(newDatabaseVersion);
 			
 			logger.log(Level.INFO, "Saving local delta database, version "+newDatabaseVersion.getHeader()+" to file "+localDeltaDatabaseFile+" ...");
@@ -222,11 +222,11 @@ public class UpOperation extends Operation {
 		return locallyUpdatedFiles;
 	}
 
-	private void updateResultChangeSet(DatabaseVersion newDatabaseVersion) {
+	private void updateResultChangeSet(MemDatabaseVersion newDatabaseVersion) {
 		ChangeSet changeSet = result.getChangeSet();
 		
-		for (IPartialFileHistory partialFileHistory : newDatabaseVersion.getFileHistories()) {
-			IFileVersion lastFileVersion = partialFileHistory.getLastVersion();
+		for (PartialFileHistory partialFileHistory : newDatabaseVersion.getFileHistories()) {
+			FileVersion lastFileVersion = partialFileHistory.getLastVersion();
 			
 			switch (lastFileVersion.getStatus()) {
 				case NEW:
@@ -245,8 +245,8 @@ public class UpOperation extends Operation {
 		}		
 	}
 
-	private void uploadMultiChunks(Collection<IMultiChunkEntry> multiChunksEntries) throws InterruptedException, StorageException {
-		for (IMultiChunkEntry multiChunkEntry : multiChunksEntries) {
+	private void uploadMultiChunks(Collection<MultiChunkEntry> multiChunksEntries) throws InterruptedException, StorageException {
+		for (MultiChunkEntry multiChunkEntry : multiChunksEntries) {
 			if (dirtyDatabase != null && dirtyDatabase.getMultiChunk(multiChunkEntry.getId()) != null) {
 				logger.log(Level.INFO, "- Ignoring multichunk (from dirty database, already uploaded), "+StringUtil.toHex(multiChunkEntry.getId())+" ...");	
 			}
@@ -268,7 +268,7 @@ public class UpOperation extends Operation {
 		transferManager.upload(localDatabaseFile, remoteDatabaseFile);
 	}
 
-	private DatabaseVersion index(List<File> localFiles, Database database) throws FileNotFoundException, IOException {			
+	private MemDatabaseVersion index(List<File> localFiles, MemDatabase database) throws FileNotFoundException, IOException {			
 		// Get last vector clock
 		VectorClock lastVectorClock = null;
 		
@@ -305,7 +305,7 @@ public class UpOperation extends Operation {
 		Deduper deduper = new Deduper(config.getChunker(), config.getMultiChunker(), config.getTransformer());
 		Indexer indexer = new Indexer(config, deduper, database, dirtyDatabase);
 		
-		DatabaseVersion newDatabaseVersion = indexer.index(localFiles);	
+		MemDatabaseVersion newDatabaseVersion = indexer.index(localFiles);	
 	
 		newDatabaseVersion.setVectorClock(newVectorClock);
 		newDatabaseVersion.setTimestamp(new Date());	
@@ -327,7 +327,7 @@ public class UpOperation extends Operation {
 		return ownDatabaseRemoteFiles;		
 	}
 	
-	private void cleanupOldDatabases(Database database, long newestLocalDatabaseVersion) throws Exception {
+	private void cleanupOldDatabases(MemDatabase database, long newestLocalDatabaseVersion) throws Exception {
 		// Retrieve and sort machine's database versions
 		Map<String, DatabaseRemoteFile> ownRemoteDatabaseFiles = retrieveOwnRemoteDatabaseFiles();
 		List<DatabaseRemoteFile> ownDatabaseFiles = new ArrayList<DatabaseRemoteFile>();	
@@ -349,12 +349,12 @@ public class UpOperation extends Operation {
 		DatabaseRemoteFile firstMergeDatabaseFile = ownDatabaseFiles.get(0);
 		DatabaseRemoteFile lastMergeDatabaseFile = ownDatabaseFiles.get(ownDatabaseFiles.size()-MIN_KEEP_DATABASE_VERSIONS-1);
 		
-		IDatabaseVersion firstMergeDatabaseVersion = null;
-		IDatabaseVersion lastMergeDatabaseVersion = null;
+		DatabaseVersion firstMergeDatabaseVersion = null;
+		DatabaseVersion lastMergeDatabaseVersion = null;
 		
 		List<RemoteFile> toDeleteDatabaseFiles = new ArrayList<RemoteFile>();
 		
-		for (IDatabaseVersion databaseVersion : database.getDatabaseVersions()) {
+		for (DatabaseVersion databaseVersion : database.getDatabaseVersions()) {
 			Long localVersion = databaseVersion.getVectorClock().get(config.getMachineName());
 
 			if (localVersion != null) {				

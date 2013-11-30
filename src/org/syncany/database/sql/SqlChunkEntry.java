@@ -1,6 +1,6 @@
 /*
- * Syncany, www.syncany.org
- * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ * Syncany
+ * Copyright (C) 2011 Philipp C. Heckel <philipp.heckel@gmail.com> 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.syncany.database.persistence;
+package org.syncany.database.sql;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -29,15 +29,18 @@ import javax.persistence.Transient;
 import org.hibernate.CallbackException;
 import org.hibernate.Session;
 import org.hibernate.classic.Lifecycle;
+import org.syncany.database.ChunkEntry;
 import org.syncany.util.StringUtil;
 
+
 /**
- * @author lum
  *
+ * @author lum
  */
 @Entity
-@Table(name = "ChunkIdEntity")
-public class ChunkIdEntity implements Lifecycle{
+@Table(name = "ChunkEntity")
+public class SqlChunkEntry implements Lifecycle, ChunkEntry {
+	
 	@Transient
 	private byte[] checksum;  
 	
@@ -45,14 +48,31 @@ public class ChunkIdEntity implements Lifecycle{
 	@Column(name = "checksumEncoded")
 	private String checksumEncoded; 
 	
-	public ChunkIdEntity() {
+	@Column(name = "size")
+    private int size;    
+
+	public SqlChunkEntry() {
 		
 	}
 	
-	public ChunkIdEntity(byte[] checksum) {
+	public SqlChunkEntry(byte[] checksum) {
         this.checksum = checksum;
         this.checksumEncoded = StringUtil.toHex(checksum);
 	}
+	
+    public SqlChunkEntry(byte[] checksum, int size) {
+        this.checksum = checksum;
+        this.checksumEncoded = StringUtil.toHex(checksum);
+        this.size = size;
+    }    
+
+    public void setSize(int chunksize) {
+        this.size = chunksize;
+    }
+
+    public int getSize() {
+        return size;
+    }   
     
     public byte[] getChecksum() {
     	if(this.checksum == null) {
@@ -84,14 +104,15 @@ public class ChunkIdEntity implements Lifecycle{
 	
 	@Override
 	public String toString() {
-		return "ChunkEntry [checksum=" + StringUtil.toHex(checksum) + "]";
+		return "ChunkEntry [checksum=" + StringUtil.toHex(checksum) + ", size=" + size + "]";
 	}
-	
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + Arrays.hashCode(checksum);
+		result = prime * result + size;
 		return result;
 	}
 
@@ -103,8 +124,10 @@ public class ChunkIdEntity implements Lifecycle{
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		ChunkIdEntity other = (ChunkIdEntity) obj;
+		SqlChunkEntry other = (SqlChunkEntry) obj;
 		if (!Arrays.equals(checksum, other.checksum))
+			return false;
+		if (size != other.size)
 			return false;
 		return true;
 	}
@@ -132,3 +155,5 @@ public class ChunkIdEntity implements Lifecycle{
 	}
 	
 }
+
+

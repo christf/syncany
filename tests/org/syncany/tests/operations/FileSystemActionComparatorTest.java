@@ -27,8 +27,8 @@ import org.junit.Test;
 import org.syncany.config.Config;
 import org.syncany.config.to.ConfigTO;
 import org.syncany.config.to.RepoTO;
-import org.syncany.database.FileVersion;
-import org.syncany.database.persistence.IFileVersion.FileType;
+import org.syncany.database.FileVersion.FileType;
+import org.syncany.database.mem.MemFileVersion;
 import org.syncany.operations.FileSystemActionComparator;
 import org.syncany.operations.actions.DeleteFileSystemAction;
 import org.syncany.operations.actions.FileSystemAction;
@@ -77,31 +77,31 @@ public class FileSystemActionComparatorTest {
 	}
 	
 	private DeleteFileSystemAction createDeleteFileSystemAction(String path, FileType type) throws Exception {
-		FileVersion firstFileVersion = createFileVersion(path, type);
-		FileVersion secondFileVersion = createFileVersion(path, type, firstFileVersion);
+		MemFileVersion firstFileVersion = createFileVersion(path, type);
+		MemFileVersion secondFileVersion = createFileVersion(path, type, firstFileVersion);
 		
 		return new DeleteFileSystemAction(createDummyConfig(), firstFileVersion, secondFileVersion, null, null);
 	}	
 
 	private NewFileSystemAction createNewFileSystemAction(String path, FileType type) throws Exception {
-		FileVersion firstFileVersion = createFileVersion(path, type);
+		MemFileVersion firstFileVersion = createFileVersion(path, type);
 		return new NewFileSystemAction(createDummyConfig(), firstFileVersion, null, null);
 	}
 	
 	private RenameFileSystemAction createRenameFileSystemAction(String fromPath, String toPath, FileType type) throws Exception {
-		FileVersion firstFileVersion = createFileVersion(fromPath, type);
-		FileVersion secondFileVersion = createFileVersion(toPath, type, firstFileVersion);
+		MemFileVersion firstFileVersion = createFileVersion(fromPath, type);
+		MemFileVersion secondFileVersion = createFileVersion(toPath, type, firstFileVersion);
 		
 		return new RenameFileSystemAction(createDummyConfig(), firstFileVersion, secondFileVersion, null, null);
 	}
 
-	private FileVersion createFileVersion(String path, FileType type) {
+	private MemFileVersion createFileVersion(String path, FileType type) {
 		return createFileVersion(path, type, null);
 	}
 	
-	private FileVersion createFileVersion(String path, FileType type, FileVersion basedOnFileVersion) {
+	private MemFileVersion createFileVersion(String path, FileType type, MemFileVersion basedOnFileVersion) {
 		if (basedOnFileVersion == null) {
-			FileVersion fileVersion = new FileVersion();
+			MemFileVersion fileVersion = new MemFileVersion();
 			fileVersion.setPath(path);
 			fileVersion.setType(type);
 			fileVersion.setVersion(1L);
@@ -109,7 +109,7 @@ public class FileSystemActionComparatorTest {
 			return fileVersion;
 		}
 		else {
-			FileVersion fileVersion = basedOnFileVersion.clone();
+			MemFileVersion fileVersion = basedOnFileVersion.clone();
 			fileVersion.setPath(path);
 			fileVersion.setType(type);
 			fileVersion.setVersion(basedOnFileVersion.getVersion()+1);

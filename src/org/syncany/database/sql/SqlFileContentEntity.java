@@ -1,6 +1,6 @@
 /*
- * Syncany
- * Copyright (C) 2011 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ * Syncany, www.syncany.org
+ * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,69 +15,68 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.syncany.database.persistence;
+package org.syncany.database.sql;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.Id;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.hibernate.CallbackException;
 import org.hibernate.Session;
 import org.hibernate.classic.Lifecycle;
+import org.syncany.database.FileContent;
+import org.syncany.database.mem.MemChunkEntry.ChunkEntryId;
 import org.syncany.util.StringUtil;
 
-
-/**
- *
- * @author lum
- */
 @Entity
-@Table(name = "ChunkEntity")
-public class ChunkEntity implements Lifecycle, IChunkEntry {
+@Table(name = "FileContentEntity")
+public class SqlFileContentEntity implements FileContent, Lifecycle {
 	
 	@Transient
-	private byte[] checksum;  
+    private byte[] checksum;
 	
 	@Id
 	@Column(name = "checksumEncoded")
-	private String checksumEncoded; 
+	private String checksumEncoded;
 	
-	@Column(name = "size")
-    private int size;    
-
-	public ChunkEntity() {
-		
-	}
-	
-	public ChunkEntity(byte[] checksum) {
-        this.checksum = checksum;
-        this.checksumEncoded = StringUtil.toHex(checksum);
-	}
-	
-    public ChunkEntity(byte[] checksum, int size) {
-        this.checksum = checksum;
-        this.checksumEncoded = StringUtil.toHex(checksum);
-        this.size = size;
-    }    
-
-    public void setSize(int chunksize) {
-        this.size = chunksize;
-    }
-
-    public int getSize() {
-        return size;
-    }   
+	@Column(name = "contentSize")
+    private long contentSize;
     
+    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    private List<ChunkIdEntity> chunks;
+    
+    public SqlFileContentEntity() {
+        this.chunks = new ArrayList<ChunkIdEntity>();
+    }
+    
+    public SqlFileContentEntity(byte[] checksum, long contentSize) {
+        this();
+        this.contentSize = contentSize;
+        this.checksum = checksum;
+        this.checksumEncoded = StringUtil.toHex(checksum);
+    }
+       
+    public void addChunk(ChunkEntryId chunk) {
+        chunks.add(new ChunkIdEntity(chunk.getArray()));        
+    }    
+    
+    public void addChunk(ChunkIdEntity chunk) {
+    	chunks.add(chunk);
+    }  
+
     public byte[] getChecksum() {
-    	if(this.checksum == null) {
-    		this.checksum = StringUtil.fromHex(checksumEncoded);	
-    	}
-    	
         return checksum;
     }
 
@@ -85,33 +84,30 @@ public class ChunkEntity implements Lifecycle, IChunkEntry {
         this.checksum = checksum;
         this.checksumEncoded = StringUtil.toHex(checksum);
     }
-    
-	/**
-	 * @return the checksumEncoded
-	 */
-	public String getChecksumEncoded() {
-		return checksumEncoded;
-	}
 
-	/**
-	 * @param checksumEncoded the checksumEncoded to set
-	 */
-	public void setChecksumEncoded(String checksumEncoded) {
-		this.checksumEncoded = checksumEncoded;
-		this.checksum = StringUtil.fromHex(checksumEncoded);	
-	}
-	
-	@Override
-	public String toString() {
-		return "ChunkEntry [checksum=" + StringUtil.toHex(checksum) + ", size=" + size + "]";
-	}
+    public long getSize() {
+        return contentSize;
+    }
+
+    public void setSize(long contentSize) {
+        this.contentSize = contentSize;
+    }
+
+    public Collection<ChunkEntryId> getChunks() {
+    	List<ChunkEntryId> chunkEntryIds = new ArrayList<ChunkEntryId>();
+    	for (ChunkIdEntity chunk : chunks) {
+    		chunkEntryIds.add(new ChunkEntryId(chunk.getChecksum()));
+		}
+        return Collections.unmodifiableCollection(chunkEntryIds);
+    }
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + Arrays.hashCode(checksum);
-		result = prime * result + size;
+		result = prime * result + ((chunks == null) ? 0 : chunks.hashCode());
+		result = prime * result + (int) (contentSize ^ (contentSize >>> 32));
 		return result;
 	}
 
@@ -123,12 +119,22 @@ public class ChunkEntity implements Lifecycle, IChunkEntry {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		ChunkEntity other = (ChunkEntity) obj;
+		SqlFileContentEntity other = (SqlFileContentEntity) obj;
 		if (!Arrays.equals(checksum, other.checksum))
 			return false;
-		if (size != other.size)
+		if (chunks == null) {
+			if (other.chunks != null)
+				return false;
+		} else if (!chunks.equals(other.chunks))
+			return false;
+		if (contentSize != other.contentSize)
 			return false;
 		return true;
+	}
+
+	@Override
+	public String toString() {
+		return "FileContent [checksum=" + StringUtil.toHex(checksum) + ", contentSize=" + contentSize + ", chunks=" + chunks + "]";
 	}
 
 	@Override
@@ -152,7 +158,5 @@ public class ChunkEntity implements Lifecycle, IChunkEntry {
 	public void onLoad(Session s, Serializable id) {
 		this.checksum = StringUtil.fromHex(checksumEncoded);
 	}
-	
+            
 }
-
-

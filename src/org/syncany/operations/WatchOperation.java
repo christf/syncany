@@ -27,7 +27,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.syncany.config.Config;
-import org.syncany.database.Database;
+import org.syncany.database.mem.MemDatabase;
 import org.syncany.operations.NotificationListener.NotificationListenerListener;
 import org.syncany.operations.RecursiveWatcher.WatchListener;
 import org.syncany.operations.UpOperation.UpOperationResult;
@@ -62,7 +62,7 @@ public class WatchOperation extends Operation implements NotificationListenerLis
 
 	private WatchOperationOptions options;
 
-	private Database database;
+	private MemDatabase database;
 	private boolean syncRunning;
 
 	private RecursiveWatcher recursiveWatcher;

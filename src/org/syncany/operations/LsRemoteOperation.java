@@ -33,12 +33,12 @@ import org.syncany.connection.plugins.DatabaseRemoteFile;
 import org.syncany.connection.plugins.RemoteFile;
 import org.syncany.connection.plugins.StorageException;
 import org.syncany.connection.plugins.TransferManager;
-import org.syncany.database.Database;
 import org.syncany.database.VectorClock;
+import org.syncany.database.mem.MemDatabase;
 
 public class LsRemoteOperation extends Operation {
 	private static final Logger logger = Logger.getLogger(LsRemoteOperation.class.getSimpleName());	
-	private Database loadedDatabase;
+	private MemDatabase loadedDatabase;
 	private TransferManager loadedTransferManager;
 	private Set<String> alreadyDownloadedRemoteDatabases;
 	
@@ -46,7 +46,7 @@ public class LsRemoteOperation extends Operation {
 		this(config, null, null);
 	}	
 	
-	public LsRemoteOperation(Config config, Database database, TransferManager transferManager) {
+	public LsRemoteOperation(Config config, MemDatabase database, TransferManager transferManager) {
 		super(config);		
 		
 		this.loadedDatabase = database;
@@ -60,7 +60,7 @@ public class LsRemoteOperation extends Operation {
 		logger.log(Level.INFO, "Running 'Remote Status' at client "+config.getMachineName()+" ...");
 		logger.log(Level.INFO, "--------------------------------------------");
 		
-		Database database = (loadedDatabase != null) ? loadedDatabase : loadLocalDatabaseFromSQL();		
+		MemDatabase database = (loadedDatabase != null) ? loadedDatabase : loadLocalDatabaseFromSQL();		
 		
 		TransferManager transferManager = (loadedTransferManager != null)
 				? loadedTransferManager
@@ -91,7 +91,7 @@ public class LsRemoteOperation extends Operation {
 		return alreadyDownloadedRemoteDatabases;
 	}
 
-	private List<RemoteFile> listUnknownRemoteDatabases(Database db, TransferManager transferManager, Set<String> alreadyDownloadedRemoteDatabases2) throws StorageException {
+	private List<RemoteFile> listUnknownRemoteDatabases(MemDatabase db, TransferManager transferManager, Set<String> alreadyDownloadedRemoteDatabases2) throws StorageException {
 		logger.log(Level.INFO, "Retrieving remote database list.");
 		
 		List<RemoteFile> unknownRemoteDatabasesList = new ArrayList<RemoteFile>();

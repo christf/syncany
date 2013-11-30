@@ -26,29 +26,29 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.syncany.config.Config;
-import org.syncany.database.ChunkEntry.ChunkEntryId;
-import org.syncany.database.Database;
 import org.syncany.database.DatabaseDAO;
+import org.syncany.database.ChunkEntry;
 import org.syncany.database.DatabaseVersion;
+import org.syncany.database.DatabaseVersionHeader;
+import org.syncany.database.FileContent;
+import org.syncany.database.FileVersion;
+import org.syncany.database.MultiChunkEntry;
+import org.syncany.database.PartialFileHistory;
 import org.syncany.database.VectorClock;
 import org.syncany.database.VectorClock.VectorClockComparison;
-import org.syncany.database.XmlDatabaseDAO;
-import org.syncany.database.dao.DAO;
-import org.syncany.database.persistence.ChunkEntity;
-import org.syncany.database.persistence.ChunkIdEntity;
-import org.syncany.database.persistence.DatabaseVersionEntity;
-import org.syncany.database.persistence.DatabaseVersionHeaderEntity;
-import org.syncany.database.persistence.FileContentEntity;
-import org.syncany.database.persistence.FileVersionEntity;
-import org.syncany.database.persistence.IChunkEntry;
-import org.syncany.database.persistence.IDatabaseVersion;
-import org.syncany.database.persistence.IDatabaseVersionHeader;
-import org.syncany.database.persistence.IFileContent;
-import org.syncany.database.persistence.IFileVersion;
-import org.syncany.database.persistence.IMultiChunkEntry;
-import org.syncany.database.persistence.IPartialFileHistory;
-import org.syncany.database.persistence.MultiChunkEntity;
-import org.syncany.database.persistence.PartialFileHistoryEntity;
+import org.syncany.database.mem.MemDatabase;
+import org.syncany.database.mem.MemDatabaseVersion;
+import org.syncany.database.mem.XmlDatabaseDAO;
+import org.syncany.database.mem.MemChunkEntry.ChunkEntryId;
+import org.syncany.database.sql.SqlChunkEntry;
+import org.syncany.database.sql.ChunkIdEntity;
+import org.syncany.database.sql.DAO;
+import org.syncany.database.sql.SqlDatabaseVersionEntity;
+import org.syncany.database.sql.SqlDatabaseVersionHeaderEntity;
+import org.syncany.database.sql.SqlFileContentEntity;
+import org.syncany.database.sql.SqlFileVersionEntity;
+import org.syncany.database.sql.SqlMultiChunkEntry;
+import org.syncany.database.sql.SqlPartialFileHistoryEntity;
 
 /**
  * Operations represent and implement Syncany's business logic. They typically
@@ -82,11 +82,11 @@ public abstract class Operation {
 	 */
 	public abstract OperationResult execute() throws Exception;
 
-	protected void saveLocalDatabase(Database db, File localDatabaseFile) throws IOException {
+	protected void saveLocalDatabase(MemDatabase db, File localDatabaseFile) throws IOException {
 		saveLocalDatabase(db, null, null, localDatabaseFile);
 	}
 
-	protected void saveLocalDatabase(Database db, DatabaseVersion fromVersion, DatabaseVersion toVersion, File localDatabaseFile) throws IOException {
+	protected void saveLocalDatabase(MemDatabase db, MemDatabaseVersion fromVersion, MemDatabaseVersion toVersion, File localDatabaseFile) throws IOException {
 		logger.log(Level.INFO, "- Saving database to " + localDatabaseFile + " ...");
 
 		DatabaseDAO dao = new XmlDatabaseDAO(config.getTransformer());
@@ -94,45 +94,45 @@ public abstract class Operation {
 	}
 
 	// FIXME move to a butter place; SQL-DatabaseDAO
-	protected void saveLocalDatabaseToSQL(Database db) throws IOException {
+	protected void saveLocalDatabaseToSQL(MemDatabase db) throws IOException {
 		saveLocalDatabaseToSQL(db, null, null);
 	}
 
 	// FIXME move to a butter place
-	protected void saveLocalDatabaseToSQL(Database db, IDatabaseVersion fromVersion, IDatabaseVersion toVersion) throws IOException {
-		DAO<DatabaseVersionEntity> dao = new DAO<DatabaseVersionEntity>(DatabaseVersionEntity.class);
+	protected void saveLocalDatabaseToSQL(MemDatabase db, DatabaseVersion fromVersion, DatabaseVersion toVersion) throws IOException {
+		DAO<SqlDatabaseVersionEntity> dao = new DAO<SqlDatabaseVersionEntity>(SqlDatabaseVersionEntity.class);
 
-		for (IDatabaseVersion databaseVersion : db.getDatabaseVersions()) {
+		for (DatabaseVersion databaseVersion : db.getDatabaseVersions()) {
 			boolean databaseVersionInSaveRange = databaseVersionInRange(databaseVersion, fromVersion, toVersion);
 
 			if (!databaseVersionInSaveRange) {
 				continue;
 			}
 
-			DatabaseVersionEntity entity = mapIDatabaseVersionToDatabaseVersionEntity(databaseVersion);
+			SqlDatabaseVersionEntity entity = mapIDatabaseVersionToDatabaseVersionEntity(databaseVersion);
 
 			dao.save(entity);
 		}
 	}
 
-	private DatabaseVersionEntity mapIDatabaseVersionToDatabaseVersionEntity(IDatabaseVersion databaseVersion) {
-		if (databaseVersion instanceof DatabaseVersionEntity) {
-			return (DatabaseVersionEntity) databaseVersion;
+	private SqlDatabaseVersionEntity mapIDatabaseVersionToDatabaseVersionEntity(DatabaseVersion databaseVersion) {
+		if (databaseVersion instanceof SqlDatabaseVersionEntity) {
+			return (SqlDatabaseVersionEntity) databaseVersion;
 		}
 		else {
-			DatabaseVersionEntity entity = new DatabaseVersionEntity();
+			SqlDatabaseVersionEntity entity = new SqlDatabaseVersionEntity();
 			entity.setHeader(mapIDatabaseVersionHeaderToDatabaseVersionHeaderEntity(databaseVersion.getHeader()));
 			entity.addChunks(mapIChunkEntryMapToChunkEntityMap(databaseVersion.getChunks()));
 
-			for (IMultiChunkEntry multiChunk : databaseVersion.getMultiChunks()) {
+			for (MultiChunkEntry multiChunk : databaseVersion.getMultiChunks()) {
 				entity.addMultiChunk(mapIMultiChunkEntryToMultiChunkEntity(multiChunk));
 			}
 
-			for (IFileContent fileContent : databaseVersion.getFileContents()) {
+			for (FileContent fileContent : databaseVersion.getFileContents()) {
 				entity.addFileContent(mapIFileContentToFileContentEntity(fileContent));
 			}
 
-			for (IPartialFileHistory fileHistory : databaseVersion.getFileHistories()) {
+			for (PartialFileHistory fileHistory : databaseVersion.getFileHistories()) {
 				entity.addFileHistory(mapIPartialFileHistoryToPartialFileHistoryEntity(fileHistory));
 			}
 
@@ -140,17 +140,17 @@ public abstract class Operation {
 		}
 	}
 
-	private PartialFileHistoryEntity mapIPartialFileHistoryToPartialFileHistoryEntity(IPartialFileHistory fileHistory) {
-		PartialFileHistoryEntity entity = new PartialFileHistoryEntity();
+	private SqlPartialFileHistoryEntity mapIPartialFileHistoryToPartialFileHistoryEntity(PartialFileHistory fileHistory) {
+		SqlPartialFileHistoryEntity entity = new SqlPartialFileHistoryEntity();
 		entity.setFileId(fileHistory.getFileId());
-		for (IFileVersion fileVersion : fileHistory.getFileVersions().values()) {
+		for (FileVersion fileVersion : fileHistory.getFileVersions().values()) {
 			entity.addFileVersion(mapIFileVersionToFileVersionEntity(fileVersion));
 		}
 		return entity;
 	}
 
-	private FileVersionEntity mapIFileVersionToFileVersionEntity(IFileVersion fileVersion) {
-		FileVersionEntity entity = new FileVersionEntity();
+	private SqlFileVersionEntity mapIFileVersionToFileVersionEntity(FileVersion fileVersion) {
+		SqlFileVersionEntity entity = new SqlFileVersionEntity();
 		entity.setChecksum(fileVersion.getChecksum());
 		entity.setCreatedBy(fileVersion.getCreatedBy());
 		entity.setDosAttributes(fileVersion.getDosAttributes());
@@ -166,15 +166,15 @@ public abstract class Operation {
 		return entity;
 	}
 
-	private FileContentEntity mapIFileContentToFileContentEntity(IFileContent fileContent) {
-		FileContentEntity entity = new FileContentEntity();
+	private SqlFileContentEntity mapIFileContentToFileContentEntity(FileContent fileContent) {
+		SqlFileContentEntity entity = new SqlFileContentEntity();
 		entity.setChecksum(fileContent.getChecksum());
 		entity.setSize(fileContent.getSize());
 		return entity;
 	}
 
-	private MultiChunkEntity mapIMultiChunkEntryToMultiChunkEntity(IMultiChunkEntry multiChunk) {
-		MultiChunkEntity entity = new MultiChunkEntity();
+	private SqlMultiChunkEntry mapIMultiChunkEntryToMultiChunkEntity(MultiChunkEntry multiChunk) {
+		SqlMultiChunkEntry entity = new SqlMultiChunkEntry();
 		entity.setId(multiChunk.getId());
 		entity.setChunks(mapChunkEntryIdsToChunkEntities(multiChunk.getChunks()));
 		return entity;
@@ -188,32 +188,32 @@ public abstract class Operation {
 		return entities;
 	}
 
-	private List<IChunkEntry> mapIChunkEntryMapToChunkEntityMap(Collection<IChunkEntry> chunks) {
-		List<IChunkEntry> chunkEntities = new ArrayList<IChunkEntry>();
-		for (IChunkEntry iChunkEntry : chunks) {
+	private List<ChunkEntry> mapIChunkEntryMapToChunkEntityMap(Collection<ChunkEntry> chunks) {
+		List<ChunkEntry> chunkEntities = new ArrayList<ChunkEntry>();
+		for (ChunkEntry iChunkEntry : chunks) {
 			chunkEntities.add(mapIChunkEntryToChunkEntity(iChunkEntry));
 		}
 		return chunkEntities;
 	}
 
-	private ChunkEntity mapIChunkEntryToChunkEntity(IChunkEntry iChunkEntry) {
-		if (iChunkEntry instanceof ChunkEntity) {
-			return (ChunkEntity) iChunkEntry;
+	private SqlChunkEntry mapIChunkEntryToChunkEntity(ChunkEntry iChunkEntry) {
+		if (iChunkEntry instanceof SqlChunkEntry) {
+			return (SqlChunkEntry) iChunkEntry;
 		}
 
-		ChunkEntity entity = new ChunkEntity();
+		SqlChunkEntry entity = new SqlChunkEntry();
 		entity.setChecksum(iChunkEntry.getChecksum());
 		entity.setSize(iChunkEntry.getSize());
 
 		return entity;
 	}
 
-	private DatabaseVersionHeaderEntity mapIDatabaseVersionHeaderToDatabaseVersionHeaderEntity(IDatabaseVersionHeader header) {
-		if (header instanceof DatabaseVersionHeaderEntity) {
-			return (DatabaseVersionHeaderEntity) header;
+	private SqlDatabaseVersionHeaderEntity mapIDatabaseVersionHeaderToDatabaseVersionHeaderEntity(DatabaseVersionHeader header) {
+		if (header instanceof SqlDatabaseVersionHeaderEntity) {
+			return (SqlDatabaseVersionHeaderEntity) header;
 		}
 		else {
-			DatabaseVersionHeaderEntity entity = new DatabaseVersionHeaderEntity();
+			SqlDatabaseVersionHeaderEntity entity = new SqlDatabaseVersionHeaderEntity();
 			entity.setVectorClock(header.getVectorClock());
 			entity.setClient(header.getClient());
 			entity.setDate(header.getDate());
@@ -221,7 +221,7 @@ public abstract class Operation {
 		}
 	}
 
-	private boolean databaseVersionInRange(IDatabaseVersion databaseVersion, IDatabaseVersion databaseVersionFrom, IDatabaseVersion databaseVersionTo) {
+	private boolean databaseVersionInRange(DatabaseVersion databaseVersion, DatabaseVersion databaseVersionFrom, DatabaseVersion databaseVersionTo) {
 		VectorClock vectorClock = databaseVersion.getVectorClock();
 		VectorClock vectorClockRangeFrom = (databaseVersionFrom != null) ? databaseVersionFrom.getVectorClock() : null;
 		VectorClock vectorClockRangeTo = (databaseVersionTo != null) ? databaseVersionTo.getVectorClock() : null;
@@ -261,18 +261,18 @@ public abstract class Operation {
 		return greaterOrEqualToVersionFrom && lowerOrEqualToVersionTo;
 	}
 
-	protected Database loadLocalDatabase() throws IOException {
+	protected MemDatabase loadLocalDatabase() throws IOException {
 		return loadLocalDatabase(config.getDatabaseFile());
 	}
 
-	protected Database loadLocalDatabaseFromSQL() throws IOException {
-		Database db = new Database();
+	protected MemDatabase loadLocalDatabaseFromSQL() throws IOException {
+		MemDatabase db = new MemDatabase();
 
-		DAO<DatabaseVersionEntity> dao = new DAO<DatabaseVersionEntity>(DatabaseVersionEntity.class);
+		DAO<SqlDatabaseVersionEntity> dao = new DAO<SqlDatabaseVersionEntity>(SqlDatabaseVersionEntity.class);
 
-		List<DatabaseVersionEntity> databaseVersions = dao.getAll();
+		List<SqlDatabaseVersionEntity> databaseVersions = dao.getAll();
 
-		List<IDatabaseVersion> databaseVersionsInterims = new ArrayList<IDatabaseVersion>();
+		List<DatabaseVersion> databaseVersionsInterims = new ArrayList<DatabaseVersion>();
 		databaseVersionsInterims.addAll(databaseVersions);
 
 		db.addDatabaseVersions(databaseVersionsInterims);
@@ -280,8 +280,8 @@ public abstract class Operation {
 		return db;
 	}
 
-	protected Database loadLocalDatabase(File localDatabaseFile) throws IOException {
-		Database db = new Database();
+	protected MemDatabase loadLocalDatabase(File localDatabaseFile) throws IOException {
+		MemDatabase db = new MemDatabase();
 		DatabaseDAO dao = new XmlDatabaseDAO(config.getTransformer());
 
 		if (localDatabaseFile.exists()) {

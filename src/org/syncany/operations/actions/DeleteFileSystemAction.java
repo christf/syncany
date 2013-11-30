@@ -18,11 +18,11 @@
 package org.syncany.operations.actions;
 
 import org.syncany.config.Config;
-import org.syncany.database.Database;
-import org.syncany.database.persistence.IFileVersion;
+import org.syncany.database.FileVersion;
+import org.syncany.database.mem.MemDatabase;
 
 public class DeleteFileSystemAction extends FileSystemAction {
-	public DeleteFileSystemAction(Config config, IFileVersion fromFileVersion, IFileVersion toDeleteFileVersion, Database localDatabase, Database winningDatabase) {
+	public DeleteFileSystemAction(Config config, FileVersion fromFileVersion, FileVersion toDeleteFileVersion, MemDatabase localDatabase, MemDatabase winningDatabase) {
 		super(config, localDatabase, winningDatabase, fromFileVersion, toDeleteFileVersion);
 	}
 	

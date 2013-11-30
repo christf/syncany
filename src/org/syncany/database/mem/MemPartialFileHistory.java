@@ -15,42 +15,39 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.syncany.database.persistence;
+package org.syncany.database.mem;
 
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
+import org.syncany.database.FileVersion;
+import org.syncany.database.PartialFileHistory;
 
-import org.hibernate.annotations.LazyCollection;
-import org.hibernate.annotations.LazyCollectionOption;
-
-@Entity
-@Table(name = "PartialFileHistoryEntity")
-public class PartialFileHistoryEntity implements IPartialFileHistory{
-
-	@Id
-	@Column(name = "fileId")
+/**
+ * A <tt>PartialFileHistory</tt> represents a single file in a repository over a 
+ * certain period of time/versions. Whenever a file is updated or deleted, a new  
+ * {@link MemFileVersion} is added to the file history. 
+ * 
+ * <p>A file history is identified by a unique random identifier and holds a sorted
+ * list of file versions. 
+ * 
+ * <p>Due to cleanup mechanisms and the delta database concept, the list of file
+ * versions is not always complete. The class hence represents a part of the file
+ * history.
+ * 
+ * @see MemFileVersion
+ * @author Philipp C. Heckel <philipp.heckel@gmail.com>
+ */
+public class MemPartialFileHistory implements PartialFileHistory {
+	//TODO [medium] switch to a 128 or 160 bit id to limit the collision risk
     private Long fileId;
-	
-    @OneToMany(cascade = CascadeType.ALL)
-    @LazyCollection(LazyCollectionOption.FALSE)
-    private Map<Long, FileVersionEntity> versions;
+    private TreeMap<Long, FileVersion> versions;
     
-    public PartialFileHistoryEntity(long fileId) {
+    public MemPartialFileHistory(long fileId) {
         this.fileId = fileId;
-        this.versions = new TreeMap<Long, FileVersionEntity>();    	
-    }
-    
-    public PartialFileHistoryEntity() {
-        this.versions = new TreeMap<Long, FileVersionEntity>();    	
+        this.versions = new TreeMap<Long, FileVersion>();    	
     }
 
     public Long getFileId() {
@@ -61,21 +58,20 @@ public class PartialFileHistoryEntity implements IPartialFileHistory{
         this.fileId = fileId;
     }
 
-    public Map<Long, IFileVersion> getFileVersions() {
-		Map<Long, ? extends IFileVersion> versionMap = versions;
-        return Collections.unmodifiableMap(versionMap);
+    public Map<Long, FileVersion> getFileVersions() {
+        return Collections.unmodifiableMap(versions);
     }
     
-    public FileVersionEntity getFileVersion(long version) {
+    public FileVersion getFileVersion(long version) {
     	return versions.get(version);
     }
     
-    public FileVersionEntity getLastVersion() {
+    public FileVersion getLastVersion() {
         if (versions.isEmpty()) {
             return null;
         }
-        TreeMap<Long, FileVersionEntity> versionsTree = (TreeMap<Long, FileVersionEntity>) versions;
-        return versionsTree.lastEntry().getValue();
+        
+        return versions.lastEntry().getValue();
     }   
 
     /**
@@ -84,21 +80,16 @@ public class PartialFileHistoryEntity implements IPartialFileHistory{
      * @return an iterator on the version numbers in reverse order 
      */
     public Iterator<Long> getDescendingVersionNumber() {
-        TreeMap<Long, FileVersionEntity> versionsTree = (TreeMap<Long, FileVersionEntity>) versions;
-    	return Collections.unmodifiableSet(versionsTree.descendingKeySet()).iterator();
+    	return Collections.unmodifiableSet(versions.descendingKeySet()).iterator();
     }
     
-    public void addFileVersion(IFileVersion fileVersion) {
-		if(fileVersion instanceof FileVersionEntity) {
-			versions.put(fileVersion.getVersion(), (FileVersionEntity)fileVersion);     
-		} else {
-			throw new RuntimeException("Invalid subclass for file version. Implement mapping to Entity.");
-		}
+    public void addFileVersion(FileVersion fileVersion) {
+        versions.put(fileVersion.getVersion(), fileVersion);        
     }
     
     @Override
-    public PartialFileHistoryEntity clone() {
-    	PartialFileHistoryEntity clone = new PartialFileHistoryEntity(fileId);
+    public MemPartialFileHistory clone() {
+    	MemPartialFileHistory clone = new MemPartialFileHistory(fileId);
     	clone.versions.putAll(versions);
 
     	return clone;
@@ -106,7 +97,7 @@ public class PartialFileHistoryEntity implements IPartialFileHistory{
 
     @Override
     public String toString() {
-    	return PartialFileHistoryEntity.class.getSimpleName()+"(fileId="+fileId+", versions="+versions+")";
+    	return MemPartialFileHistory.class.getSimpleName()+"(fileId="+fileId+", versions="+versions+")";
     }
     
 	@Override
@@ -126,7 +117,7 @@ public class PartialFileHistoryEntity implements IPartialFileHistory{
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		PartialFileHistoryEntity other = (PartialFileHistoryEntity) obj;
+		MemPartialFileHistory other = (MemPartialFileHistory) obj;
 		if (fileId == null) {
 			if (other.fileId != null)
 				return false;

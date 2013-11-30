@@ -17,117 +17,30 @@
  */
 package org.syncany.database;
 
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.TreeMap;
 
-import org.syncany.database.persistence.IFileVersion;
-import org.syncany.database.persistence.IPartialFileHistory;
 
-/**
- * A <tt>PartialFileHistory</tt> represents a single file in a repository over a 
- * certain period of time/versions. Whenever a file is updated or deleted, a new  
- * {@link FileVersion} is added to the file history. 
- * 
- * <p>A file history is identified by a unique random identifier and holds a sorted
- * list of file versions. 
- * 
- * <p>Due to cleanup mechanisms and the delta database concept, the list of file
- * versions is not always complete. The class hence represents a part of the file
- * history.
- * 
- * @see FileVersion
- * @author Philipp C. Heckel <philipp.heckel@gmail.com>
- */
-public class PartialFileHistory implements IPartialFileHistory {
-	//TODO [medium] switch to a 128 or 160 bit id to limit the collision risk
-    private Long fileId;
-    private TreeMap<Long, IFileVersion> versions;
+public interface PartialFileHistory extends Cloneable {
+
+	public Long getFileId();
+	
+    public void setFileId(Long fileId);
+
+    public Map<Long, FileVersion> getFileVersions();
     
-    public PartialFileHistory(long fileId) {
-        this.fileId = fileId;
-        this.versions = new TreeMap<Long, IFileVersion>();    	
-    }
-
-    public Long getFileId() {
-        return fileId;
-    }
-
-    public void setFileId(Long fileId) {
-        this.fileId = fileId;
-    }
-
-    public Map<Long, IFileVersion> getFileVersions() {
-        return Collections.unmodifiableMap(versions);
-    }
+    public FileVersion getFileVersion(long version);
     
-    public IFileVersion getFileVersion(long version) {
-    	return versions.get(version);
-    }
+    public FileVersion getLastVersion();
     
-    public IFileVersion getLastVersion() {
-        if (versions.isEmpty()) {
-            return null;
-        }
-        
-        return versions.lastEntry().getValue();
-    }   
-
     /**
      * Returns an iterator on the version numbers stored in this partial history, in reverse order. 
      * 
      * @return an iterator on the version numbers in reverse order 
      */
-    public Iterator<Long> getDescendingVersionNumber() {
-    	return Collections.unmodifiableSet(versions.descendingKeySet()).iterator();
-    }
+    public Iterator<Long> getDescendingVersionNumber();
     
-    public void addFileVersion(IFileVersion fileVersion) {
-        versions.put(fileVersion.getVersion(), fileVersion);        
-    }
+    public void addFileVersion(FileVersion fileVersion);
     
-    @Override
-    public PartialFileHistory clone() {
-    	PartialFileHistory clone = new PartialFileHistory(fileId);
-    	clone.versions.putAll(versions);
-
-    	return clone;
-    }
-
-    @Override
-    public String toString() {
-    	return PartialFileHistory.class.getSimpleName()+"(fileId="+fileId+", versions="+versions+")";
-    }
-    
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((fileId == null) ? 0 : fileId.hashCode());
-		result = prime * result + ((versions == null) ? 0 : versions.hashCode());
-		return result;
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		PartialFileHistory other = (PartialFileHistory) obj;
-		if (fileId == null) {
-			if (other.fileId != null)
-				return false;
-		} else if (!fileId.equals(other.fileId))
-			return false;
-		if (versions == null) {
-			if (other.versions != null)
-				return false;
-		} else if (!versions.equals(other.versions))
-			return false;
-		return true;
-	}
+    public PartialFileHistory clone();
 }

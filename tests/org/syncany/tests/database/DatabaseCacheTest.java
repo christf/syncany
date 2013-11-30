@@ -26,15 +26,15 @@ import java.io.IOException;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.syncany.config.Logging;
-import org.syncany.database.ChunkEntry;
-import org.syncany.database.ChunkEntry.ChunkEntryId;
-import org.syncany.database.Database;
-import org.syncany.database.FileVersion;
-import org.syncany.database.MultiChunkEntry;
-import org.syncany.database.PartialFileHistory;
-import org.syncany.database.persistence.IDatabaseVersion;
-import org.syncany.database.persistence.IFileVersion.FileStatus;
-import org.syncany.database.persistence.IFileVersion.FileType;
+import org.syncany.database.DatabaseVersion;
+import org.syncany.database.FileVersion.FileStatus;
+import org.syncany.database.FileVersion.FileType;
+import org.syncany.database.mem.MemChunkEntry;
+import org.syncany.database.mem.MemDatabase;
+import org.syncany.database.mem.MemFileVersion;
+import org.syncany.database.mem.MemMultiChunkEntry;
+import org.syncany.database.mem.MemPartialFileHistory;
+import org.syncany.database.mem.MemChunkEntry.ChunkEntryId;
 import org.syncany.tests.util.TestDatabaseUtil;
 
 public class DatabaseCacheTest {	
@@ -44,21 +44,21 @@ public class DatabaseCacheTest {
 	
 	@Test
 	public void testChunkCache() throws IOException {		
-		Database database = new Database();
+		MemDatabase database = new MemDatabase();
 
 		// Round 1: Add chunk to new database version, then add database version
-		IDatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
+		DatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
         
-		ChunkEntry chunkA1 = new ChunkEntry(new byte[] { 1,2,3,4,5,7,8,9,0 }, 12);
+		MemChunkEntry chunkA1 = new MemChunkEntry(new byte[] { 1,2,3,4,5,7,8,9,0 }, 12);
         databaseVersion1.addChunk(chunkA1);
         
         database.addDatabaseVersion(databaseVersion1);
         assertEquals(chunkA1, database.getChunk(new byte[] { 1,2,3,4,5,7,8,9,0 }));
 
 		// Round 2: Add chunk to new database version, then add database version
-        IDatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
+        DatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
 
-		ChunkEntry chunkA2 = new ChunkEntry(new byte[] { 9,8,7,6,5,4,3,2,1 }, 112);        
+		MemChunkEntry chunkA2 = new MemChunkEntry(new byte[] { 9,8,7,6,5,4,3,2,1 }, 112);        
         databaseVersion2.addChunk(chunkA2);
 
         database.addDatabaseVersion(databaseVersion2);
@@ -66,9 +66,9 @@ public class DatabaseCacheTest {
         assertEquals(chunkA2, database.getChunk(new byte[] { 9,8,7,6,5,4,3,2,1 }));        
         
         // Round 3: Add chunk to new database version, then add database version
-        IDatabaseVersion databaseVersion3 = TestDatabaseUtil.createDatabaseVersion(databaseVersion2);		
+        DatabaseVersion databaseVersion3 = TestDatabaseUtil.createDatabaseVersion(databaseVersion2);		
 		
-		ChunkEntry chunkA3 = new ChunkEntry(new byte[] { 1,1,1,1,1,1,1,1,1 }, 192);        
+		MemChunkEntry chunkA3 = new MemChunkEntry(new byte[] { 1,1,1,1,1,1,1,1,1 }, 192);        
         databaseVersion3.addChunk(chunkA3);
         
         database.addDatabaseVersion(databaseVersion3);		
@@ -79,13 +79,13 @@ public class DatabaseCacheTest {
 	
 	@Test
 	public void testMultiChunkCache() throws IOException {		
-		Database database = new Database();
+		MemDatabase database = new MemDatabase();
 
 		// Round 1: Add chunk to multichunk
-		IDatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
+		DatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
         
-		MultiChunkEntry multiChunkP1 = new MultiChunkEntry(new byte[] { 8,8,8,8,8,8,8,8 });
-		ChunkEntry chunkA1 = new ChunkEntry(new byte[] { 1,2,3,4,5,7,8,9,0 }, 12);
+		MemMultiChunkEntry multiChunkP1 = new MemMultiChunkEntry(new byte[] { 8,8,8,8,8,8,8,8 });
+		MemChunkEntry chunkA1 = new MemChunkEntry(new byte[] { 1,2,3,4,5,7,8,9,0 }, 12);
 		
 		multiChunkP1.addChunk(new ChunkEntryId(chunkA1.getChecksum()));        
 		databaseVersion1.addChunk(chunkA1);		
@@ -97,14 +97,14 @@ public class DatabaseCacheTest {
         assertEquals(multiChunkP1, database.getMultiChunk(new byte[] { 8,8,8,8,8,8,8,8 }));
 
 		// Round 2: Add chunk to multichunk
-        IDatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
+        DatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
         
-		MultiChunkEntry multiChunkP2 = new MultiChunkEntry(new byte[] { 7,7,7,7,7,7,7,7,7 });		
-		MultiChunkEntry multiChunkP3 = new MultiChunkEntry(new byte[] { 5,5,5,5,5,5,5,5,5 });
+		MemMultiChunkEntry multiChunkP2 = new MemMultiChunkEntry(new byte[] { 7,7,7,7,7,7,7,7,7 });		
+		MemMultiChunkEntry multiChunkP3 = new MemMultiChunkEntry(new byte[] { 5,5,5,5,5,5,5,5,5 });
 
-		ChunkEntry chunkA2 = new ChunkEntry(new byte[] { 9,2,3,4,5,7,8,9,0 }, 912);
-		ChunkEntry chunkA3 = new ChunkEntry(new byte[] { 8,2,3,4,5,7,8,9,0 }, 812);
-		ChunkEntry chunkA4 = new ChunkEntry(new byte[] { 7,2,3,4,5,7,8,9,0 }, 712);
+		MemChunkEntry chunkA2 = new MemChunkEntry(new byte[] { 9,2,3,4,5,7,8,9,0 }, 912);
+		MemChunkEntry chunkA3 = new MemChunkEntry(new byte[] { 8,2,3,4,5,7,8,9,0 }, 812);
+		MemChunkEntry chunkA4 = new MemChunkEntry(new byte[] { 7,2,3,4,5,7,8,9,0 }, 712);
 
 		multiChunkP2.addChunk(new ChunkEntryId(chunkA2.getChecksum()));
 		multiChunkP2.addChunk(new ChunkEntryId(chunkA3.getChecksum()));
@@ -132,13 +132,13 @@ public class DatabaseCacheTest {
 	
 	@Test
 	public void testFilenameCache() throws IOException {		
-		Database database = new Database();
+		MemDatabase database = new MemDatabase();
 
 		// Round 1: Add file history & version 
-		IDatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
+		DatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
         
-		FileVersion fileVersion1 = TestDatabaseUtil.createFileVersion("file1.jpg");		
-		PartialFileHistory fileHistory1 = new PartialFileHistory(11111111111111111L);		
+		MemFileVersion fileVersion1 = TestDatabaseUtil.createFileVersion("file1.jpg");		
+		MemPartialFileHistory fileHistory1 = new MemPartialFileHistory(11111111111111111L);		
 		
 		databaseVersion1.addFileHistory(fileHistory1);
 		databaseVersion1.addFileVersionToHistory(fileHistory1.getFileId(), fileVersion1);
@@ -148,10 +148,10 @@ public class DatabaseCacheTest {
         assertEquals(fileHistory1, database.getFileHistory("file1.jpg"));
         
         // Round 2: Add new version
-        IDatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
+        DatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
         
-		FileVersion fileVersion2 = TestDatabaseUtil.createFileVersion("file2.jpg", fileVersion1);		
-		PartialFileHistory fileHistory2 = new PartialFileHistory(11111111111111111L); // same ID		
+		MemFileVersion fileVersion2 = TestDatabaseUtil.createFileVersion("file2.jpg", fileVersion1);		
+		MemPartialFileHistory fileHistory2 = new MemPartialFileHistory(11111111111111111L); // same ID		
 		
 		databaseVersion2.addFileHistory(fileHistory2);
 		databaseVersion2.addFileVersionToHistory(fileHistory2.getFileId(), fileVersion2);
@@ -163,12 +163,12 @@ public class DatabaseCacheTest {
         assertNull(database.getFileHistory("file1.jpg"));
         
         // Round 3: Add deleted version
-        IDatabaseVersion databaseVersion3 = TestDatabaseUtil.createDatabaseVersion(databaseVersion2);		
+        DatabaseVersion databaseVersion3 = TestDatabaseUtil.createDatabaseVersion(databaseVersion2);		
         
-		FileVersion fileVersion3 = TestDatabaseUtil.createFileVersion("file2.jpg", fileVersion2);
+		MemFileVersion fileVersion3 = TestDatabaseUtil.createFileVersion("file2.jpg", fileVersion2);
 		fileVersion3.setStatus(FileStatus.DELETED);
 		
-		PartialFileHistory fileHistory3 = new PartialFileHistory(11111111111111111L); // same ID		
+		MemPartialFileHistory fileHistory3 = new MemPartialFileHistory(11111111111111111L); // same ID		
 		
 		databaseVersion3.addFileHistory(fileHistory3);
 		databaseVersion3.addFileVersionToHistory(fileHistory3.getFileId(), fileVersion3);
@@ -180,13 +180,13 @@ public class DatabaseCacheTest {
 	
 	@Test
 	public void testFilenameCacheDeleteAndNewOfSameFileInOneDatabaseVersion() throws IOException {		
-		Database database = new Database();
+		MemDatabase database = new MemDatabase();
 
 		// Round 1: Add file history & version 
-		IDatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
+		DatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
         
-		FileVersion fileVersion1 = TestDatabaseUtil.createFileVersion("file1.jpg");		
-		PartialFileHistory fileHistory1 = new PartialFileHistory(11111111111111111L);		
+		MemFileVersion fileVersion1 = TestDatabaseUtil.createFileVersion("file1.jpg");		
+		MemPartialFileHistory fileHistory1 = new MemPartialFileHistory(11111111111111111L);		
 		
 		databaseVersion1.addFileHistory(fileHistory1);
 		databaseVersion1.addFileVersionToHistory(fileHistory1.getFileId(), fileVersion1);
@@ -196,22 +196,22 @@ public class DatabaseCacheTest {
         assertEquals(fileHistory1, database.getFileHistory("file1.jpg"));
         
         // Round 2: Add new version
-        IDatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
+        DatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
         
         // - delete file1.jpg
-		FileVersion fileVersion2 = TestDatabaseUtil.createFileVersion("file1.jpg", fileVersion1);
+		MemFileVersion fileVersion2 = TestDatabaseUtil.createFileVersion("file1.jpg", fileVersion1);
 		fileVersion2.setStatus(FileStatus.DELETED);
 		
-		PartialFileHistory fileHistory2 = new PartialFileHistory(11111111111111111L); // same ID		
+		MemPartialFileHistory fileHistory2 = new MemPartialFileHistory(11111111111111111L); // same ID		
 		
 		databaseVersion2.addFileHistory(fileHistory2);
 		databaseVersion2.addFileVersionToHistory(fileHistory2.getFileId(), fileVersion2);
 		
 		// - add file1.jpg (as FOLDER!)
-		FileVersion fileVersion3 = TestDatabaseUtil.createFileVersion("file1.jpg"); // new file!
+		MemFileVersion fileVersion3 = TestDatabaseUtil.createFileVersion("file1.jpg"); // new file!
 		fileVersion3.setType(FileType.FOLDER);
 		
-		PartialFileHistory fileHistory3 = new PartialFileHistory(222222222L); // new ID	!	
+		MemPartialFileHistory fileHistory3 = new MemPartialFileHistory(222222222L); // new ID	!	
 		
 		databaseVersion2.addFileHistory(fileHistory3);
 		databaseVersion2.addFileVersionToHistory(fileHistory3.getFileId(), fileVersion3);
@@ -226,16 +226,16 @@ public class DatabaseCacheTest {
 
 	@Test
 	public void testContentChecksumCache() throws IOException {		
-		Database database = new Database();
+		MemDatabase database = new MemDatabase();
 
 		// Round 1: Add file history & version 
-		IDatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
+		DatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
         
 		// - history 1, version 1
-		FileVersion fileVersion1 = TestDatabaseUtil.createFileVersion("samechecksum1.jpg");
+		MemFileVersion fileVersion1 = TestDatabaseUtil.createFileVersion("samechecksum1.jpg");
 		fileVersion1.setChecksum(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 });
 		
-		PartialFileHistory fileHistory1 = new PartialFileHistory(11111111111111111L);		
+		MemPartialFileHistory fileHistory1 = new MemPartialFileHistory(11111111111111111L);		
 		
 		databaseVersion1.addFileHistory(fileHistory1);
 		databaseVersion1.addFileVersionToHistory(fileHistory1.getFileId(), fileVersion1);
@@ -246,32 +246,32 @@ public class DatabaseCacheTest {
         assertEquals(1, database.getFileHistories(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 }).size());
         
         // Round 2: Add two other versions with same checksum to new database version
-        IDatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
+        DatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
         
         // - history 1, version 2
-        FileVersion fileVersion11 = TestDatabaseUtil.createFileVersion("samechecksum2-renamed.jpg", fileVersion1);
+        MemFileVersion fileVersion11 = TestDatabaseUtil.createFileVersion("samechecksum2-renamed.jpg", fileVersion1);
         fileVersion11.setChecksum(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 }); // same checksum!
         fileVersion11.setStatus(FileStatus.RENAMED);
 		
-		PartialFileHistory fileHistory11 = new PartialFileHistory(11111111111111111L); // same ID as above		
+		MemPartialFileHistory fileHistory11 = new MemPartialFileHistory(11111111111111111L); // same ID as above		
 		
 		databaseVersion2.addFileHistory(fileHistory11);
 		databaseVersion2.addFileVersionToHistory(fileHistory11.getFileId(), fileVersion11);
         
         // - history 2, version 1
-		FileVersion fileVersion2 = TestDatabaseUtil.createFileVersion("samechecksum2.jpg");
+		MemFileVersion fileVersion2 = TestDatabaseUtil.createFileVersion("samechecksum2.jpg");
 		fileVersion2.setChecksum(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 }); // same checksum!
 		
-		PartialFileHistory fileHistory2 = new PartialFileHistory(22222222222222222L); // different ID		
+		MemPartialFileHistory fileHistory2 = new MemPartialFileHistory(22222222222222222L); // different ID		
 		
 		databaseVersion2.addFileHistory(fileHistory2);
 		databaseVersion2.addFileVersionToHistory(fileHistory2.getFileId(), fileVersion2);
 
 		// - history 3, version 1
-		FileVersion fileVersion3 = TestDatabaseUtil.createFileVersion("samechecksum3.jpg");
+		MemFileVersion fileVersion3 = TestDatabaseUtil.createFileVersion("samechecksum3.jpg");
 		fileVersion3.setChecksum(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 }); // same checksum!
 		
-		PartialFileHistory fileHistory3 = new PartialFileHistory(33333333333333333L); // different ID		
+		MemPartialFileHistory fileHistory3 = new MemPartialFileHistory(33333333333333333L); // different ID		
 		
 		databaseVersion2.addFileHistory(fileHistory3);
 		databaseVersion2.addFileVersionToHistory(fileHistory3.getFileId(), fileVersion3);
@@ -284,16 +284,16 @@ public class DatabaseCacheTest {
 
 	@Test
 	public void testGetFileHistory() throws IOException {		
-		Database database = new Database();
+		MemDatabase database = new MemDatabase();
 
 		// Round 1: Add file history & version 
-		IDatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
+		DatabaseVersion databaseVersion1 = TestDatabaseUtil.createDatabaseVersion();		
         
 		// - history 1, version 1
-		FileVersion fileVersion1 = TestDatabaseUtil.createFileVersion("samechecksum1.jpg");
+		MemFileVersion fileVersion1 = TestDatabaseUtil.createFileVersion("samechecksum1.jpg");
 		fileVersion1.setChecksum(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 });
 		
-		PartialFileHistory fileHistory1 = new PartialFileHistory(11111111111111111L);		
+		MemPartialFileHistory fileHistory1 = new MemPartialFileHistory(11111111111111111L);		
 		
 		databaseVersion1.addFileHistory(fileHistory1);
 		databaseVersion1.addFileVersionToHistory(fileHistory1.getFileId(), fileVersion1);
@@ -304,14 +304,14 @@ public class DatabaseCacheTest {
 		assertEquals(fileHistory1, database.getFileHistory(11111111111111111L));
 		
 		// Round 2: Add two other versions with same checksum to new database version
-		IDatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
+		DatabaseVersion databaseVersion2 = TestDatabaseUtil.createDatabaseVersion(databaseVersion1);		
         
         // - history 1, version 2
-        FileVersion fileVersion11 = TestDatabaseUtil.createFileVersion("samechecksum2-renamed.jpg", fileVersion1);
+        MemFileVersion fileVersion11 = TestDatabaseUtil.createFileVersion("samechecksum2-renamed.jpg", fileVersion1);
         fileVersion11.setChecksum(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 }); // same checksum!
         fileVersion11.setStatus(FileStatus.RENAMED);
 		
-		PartialFileHistory fileHistory11 = new PartialFileHistory(11111111111111111L); // same ID as above		
+		MemPartialFileHistory fileHistory11 = new MemPartialFileHistory(11111111111111111L); // same ID as above		
 		
 		databaseVersion2.addFileHistory(fileHistory11);
 		databaseVersion2.addFileVersionToHistory(fileHistory11.getFileId(), fileVersion11);

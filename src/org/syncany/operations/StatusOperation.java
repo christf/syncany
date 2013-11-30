@@ -30,12 +30,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.syncany.config.Config;
-import org.syncany.database.Database;
 import org.syncany.database.FileVersionComparator;
+import org.syncany.database.FileVersion;
+import org.syncany.database.PartialFileHistory;
 import org.syncany.database.FileVersionComparator.FileVersionComparison;
-import org.syncany.database.persistence.IFileVersion;
-import org.syncany.database.persistence.IFileVersion.FileStatus;
-import org.syncany.database.persistence.IPartialFileHistory;
+import org.syncany.database.FileVersion.FileStatus;
+import org.syncany.database.mem.MemDatabase;
 import org.syncany.util.FileUtil;
 
 /**
@@ -47,14 +47,14 @@ public class StatusOperation extends Operation {
 	private static final Logger logger = Logger.getLogger(StatusOperation.class.getSimpleName());	
 	
 	private FileVersionComparator fileVersionHelper; 
-	private Database loadedDatabase;
+	private MemDatabase loadedDatabase;
 	private StatusOperationOptions options;
 	
 	public StatusOperation(Config config) {
 		this(config, null, new StatusOperationOptions());
 	}	
 	
-	public StatusOperation(Config config, Database database, StatusOperationOptions options) {
+	public StatusOperation(Config config, MemDatabase database, StatusOperationOptions options) {
 		super(config);		
 		
 		this.fileVersionHelper = new FileVersionComparator(config.getLocalDir(), config.getChunker().getChecksumAlgorithm());
@@ -72,7 +72,7 @@ public class StatusOperation extends Operation {
 			logger.log(Level.INFO, "Force checksum ENABLED.");
 		}
 		
-		Database database = (loadedDatabase != null) ? loadedDatabase : loadLocalDatabaseFromSQL();		
+		MemDatabase database = (loadedDatabase != null) ? loadedDatabase : loadLocalDatabaseFromSQL();		
 		
 		logger.log(Level.INFO, "Analyzing local folder "+config.getLocalDir()+" ...");				
 		ChangeSet changeSet = findChangedAndNewFiles(config.getLocalDir(), database);
@@ -87,7 +87,7 @@ public class StatusOperation extends Operation {
 		return statusResult;
 	}		
 
-	private ChangeSet findChangedAndNewFiles(final File root, final Database database) throws FileNotFoundException, IOException {
+	private ChangeSet findChangedAndNewFiles(final File root, final MemDatabase database) throws FileNotFoundException, IOException {
 		Path rootPath = Paths.get(root.getAbsolutePath());
 		
 		StatusFileVisitor fileVisitor = new StatusFileVisitor(rootPath, database);		
@@ -96,9 +96,9 @@ public class StatusOperation extends Operation {
 		ChangeSet changeSet = fileVisitor.getChangeSet();
 		
 		// Find deleted files
-		for (IPartialFileHistory fileHistory : database.getFileHistories()) {
+		for (PartialFileHistory fileHistory : database.getFileHistories()) {
 			// Check if file exists, remove if it doesn't
-			IFileVersion lastLocalVersion = fileHistory.getLastVersion();
+			FileVersion lastLocalVersion = fileHistory.getLastVersion();
 			File lastLocalVersionOnDisk = new File(config.getLocalDir()+File.separator+lastLocalVersion.getPath());
 			
 			// Ignore this file history if the last version is marked "DELETED"
@@ -117,10 +117,10 @@ public class StatusOperation extends Operation {
 	
 	private class StatusFileVisitor implements FileVisitor<Path> {
 		private Path root;
-		private Database database;
+		private MemDatabase database;
 		private ChangeSet changeSet;
 		
-		public StatusFileVisitor(Path root, Database database) {
+		public StatusFileVisitor(Path root, MemDatabase database) {
 			this.root = root;
 			this.database = database;
 			this.changeSet = new ChangeSet();
@@ -159,10 +159,10 @@ public class StatusOperation extends Operation {
 			}				
 			
 			// Check database by file path
-			IPartialFileHistory expectedFileHistory = database.getFileHistory(relativeFilePath);				
+			PartialFileHistory expectedFileHistory = database.getFileHistory(relativeFilePath);				
 			
 			if (expectedFileHistory != null) {
-				IFileVersion expectedLastFileVersion = expectedFileHistory.getLastVersion();
+				FileVersion expectedLastFileVersion = expectedFileHistory.getLastVersion();
 				
 				// Compare
 				boolean forceChecksum = options != null && options.isForceChecksum();

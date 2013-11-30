@@ -24,9 +24,9 @@ import static org.syncany.tests.util.TestAssertUtil.assertFileListEquals;
 
 import org.junit.Test;
 import org.syncany.connection.plugins.Connection;
-import org.syncany.database.Database;
-import org.syncany.database.persistence.IFileVersion;
-import org.syncany.database.persistence.IPartialFileHistory;
+import org.syncany.database.FileVersion;
+import org.syncany.database.PartialFileHistory;
+import org.syncany.database.mem.MemDatabase;
 import org.syncany.tests.util.TestClient;
 import org.syncany.tests.util.TestConfigUtil;
 
@@ -56,19 +56,19 @@ public class RenameFileWithDiffModifiedDateScenarioTest {
 		clientB.moveFile("A-file1-with-different-modified-date.jpg", "A-file1-with-different-modified-date-moved.jpg");				
 		clientB.up();
 		
-		Database clientDatabaseB = clientB.loadLocalDatabase();
+		MemDatabase clientDatabaseB = clientB.loadLocalDatabase();
 		
-		IPartialFileHistory file1Orig = clientDatabaseB.getFileHistory("A-file1-moved.jpg");
-		IPartialFileHistory file1WithDiffLastModDate = clientDatabaseB.getFileHistory("A-file1-with-different-modified-date-moved.jpg");
+		PartialFileHistory file1Orig = clientDatabaseB.getFileHistory("A-file1-moved.jpg");
+		PartialFileHistory file1WithDiffLastModDate = clientDatabaseB.getFileHistory("A-file1-with-different-modified-date-moved.jpg");
 		
 		assertNotNull(file1Orig);
 		assertNotNull(file1WithDiffLastModDate);
 		
-		IFileVersion fileVersion1OrigV1 = file1Orig.getFileVersion(1);
-		IFileVersion fileVersion1OrigV2 = file1Orig.getFileVersion(2);
+		FileVersion fileVersion1OrigV1 = file1Orig.getFileVersion(1);
+		FileVersion fileVersion1OrigV2 = file1Orig.getFileVersion(2);
 		
-		IFileVersion fileVersion1WithDiffLastModDateV1 = file1WithDiffLastModDate.getFileVersion(1);
-		IFileVersion fileVersion1WithDiffLastModDateV2 = file1WithDiffLastModDate.getFileVersion(2);
+		FileVersion fileVersion1WithDiffLastModDateV1 = file1WithDiffLastModDate.getFileVersion(1);
+		FileVersion fileVersion1WithDiffLastModDateV2 = file1WithDiffLastModDate.getFileVersion(2);
 		
 		assertNotNull(fileVersion1OrigV1);
 		assertNotNull(fileVersion1OrigV2);

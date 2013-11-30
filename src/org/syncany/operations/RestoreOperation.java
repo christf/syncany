@@ -36,13 +36,13 @@ import org.syncany.config.Config;
 import org.syncany.connection.plugins.MultiChunkRemoteFile;
 import org.syncany.connection.plugins.StorageException;
 import org.syncany.connection.plugins.TransferManager;
-import org.syncany.database.ChunkEntry.ChunkEntryId;
-import org.syncany.database.Database;
-import org.syncany.database.persistence.IDatabaseVersion;
-import org.syncany.database.persistence.IFileContent;
-import org.syncany.database.persistence.IFileVersion;
-import org.syncany.database.persistence.IMultiChunkEntry;
-import org.syncany.database.persistence.IPartialFileHistory;
+import org.syncany.database.DatabaseVersion;
+import org.syncany.database.FileContent;
+import org.syncany.database.FileVersion;
+import org.syncany.database.MultiChunkEntry;
+import org.syncany.database.PartialFileHistory;
+import org.syncany.database.mem.MemDatabase;
+import org.syncany.database.mem.MemChunkEntry.ChunkEntryId;
 import org.syncany.operations.actions.FileSystemAction;
 import org.syncany.operations.actions.NewFileSystemAction;
 import org.syncany.util.FileUtil;
@@ -74,19 +74,19 @@ public class RestoreOperation extends Operation {
 		logger.log(Level.INFO, "Running 'Restore' at client "+config.getMachineName()+" ...");
 		logger.log(Level.INFO, "--------------------------------------------");
 		
-		Database database = loadLocalDatabase();		
-		IDatabaseVersion currentDatabaseVersion = database.getLastDatabaseVersion();
+		MemDatabase database = loadLocalDatabase();		
+		DatabaseVersion currentDatabaseVersion = database.getLastDatabaseVersion();
 		
 		if (currentDatabaseVersion == null) {
 			throw new Exception("No database versions yet locally. Nothing to revert.");
 		}
 
 		List<String> restoreFilePaths = options.getRestoreFilePaths();
-		List<IFileVersion> restoreFileVersions = null;
-		Set<IMultiChunkEntry> multiChunksToDownload = null;
+		List<FileVersion> restoreFileVersions = null;
+		Set<MultiChunkEntry> multiChunksToDownload = null;
 		
 		if (options.getStrategy() == RestoreOperationStrategy.DATABASE_DATE) {
-			Database databaseBeforeRestoreTime = getDatabaseBeforeRestoreTime(database, options.getDatabaseBeforeDate());
+			MemDatabase databaseBeforeRestoreTime = getDatabaseBeforeRestoreTime(database, options.getDatabaseBeforeDate());
 		
 			restoreFileVersions = getLastFileVersionsByPath(restoreFilePaths, databaseBeforeRestoreTime);
 			multiChunksToDownload = getMultiChunksToDownload(restoreFileVersions, databaseBeforeRestoreTime);
@@ -98,10 +98,10 @@ public class RestoreOperation extends Operation {
 		
 		downloadAndDecryptMultiChunks(multiChunksToDownload);
 		
-		for (IFileVersion restoreFileVersion : restoreFileVersions) {
+		for (FileVersion restoreFileVersion : restoreFileVersions) {
 			logger.log(Level.INFO, "- Restore to: "+restoreFileVersion);
 			
-			FileSystemAction newFileSystemAction = new NewFileSystemAction(config, restoreFileVersion, database, new Database());
+			FileSystemAction newFileSystemAction = new NewFileSystemAction(config, restoreFileVersion, database, new MemDatabase());
 			logger.log(Level.INFO, "  --> "+newFileSystemAction);
 			
 			newFileSystemAction.execute();
@@ -110,11 +110,11 @@ public class RestoreOperation extends Operation {
 		return new RestoreOperationResult();
 	}			
 	
-	private List<IFileVersion> getPreviousFileVersionsByPath(Database database, List<String> restoreFilePaths, Integer restoreVersionNumber) {
-		List<IFileVersion> restoreFileVersions = new ArrayList<IFileVersion>();
+	private List<FileVersion> getPreviousFileVersionsByPath(MemDatabase database, List<String> restoreFilePaths, Integer restoreVersionNumber) {
+		List<FileVersion> restoreFileVersions = new ArrayList<FileVersion>();
 	
 		for (String filePath : restoreFilePaths) {
-			IPartialFileHistory fileHistory = database.getFileHistory(filePath);
+			PartialFileHistory fileHistory = database.getFileHistory(filePath);
 			
 			if (fileHistory != null) {
 				// Go back <versionNumber> versions
@@ -126,8 +126,8 @@ public class RestoreOperation extends Operation {
 						logger.log(Level.INFO, "- Cannot find spec. version for file history "+fileHistory.getFileId()+", only has "+fileVersionCount+" versions (going back "+restoreVersionNumber+" not possible), file "+filePath);
 					}
 					else {						
-						ArrayList<IFileVersion> fileVersions = new ArrayList<IFileVersion>(fileHistory.getFileVersions().values());
-						IFileVersion restoreFileVersion = fileVersions.get(indexOfRestoreFileVersion);
+						ArrayList<FileVersion> fileVersions = new ArrayList<FileVersion>(fileHistory.getFileVersions().values());
+						FileVersion restoreFileVersion = fileVersions.get(indexOfRestoreFileVersion);
 										
 						restoreFileVersions.add(restoreFileVersion);
 						logger.log(Level.INFO, "- "+restoreFileVersion);
@@ -136,7 +136,7 @@ public class RestoreOperation extends Operation {
 				
 				// Choose exact version <versionNumber> 
 				else {
-					IFileVersion restoreFileVersion = fileHistory.getFileVersion(restoreVersionNumber);
+					FileVersion restoreFileVersion = fileHistory.getFileVersion(restoreVersionNumber);
 					
 					if (restoreFileVersion == null) {
 						logger.log(Level.INFO, "- Cannot find spec. version for file history "+fileHistory.getFileId()+", version "+restoreVersionNumber+" does not exist, file "+filePath);
@@ -155,21 +155,21 @@ public class RestoreOperation extends Operation {
 		return restoreFileVersions;
 	}
 
-	private Set<IMultiChunkEntry> getMultiChunksToDownload(List<IFileVersion> restoreFileVersions, Database databaseBeforeRestoreTime) throws Exception {
-		Set<IMultiChunkEntry> multiChunksToDownload = new HashSet<IMultiChunkEntry>();
+	private Set<MultiChunkEntry> getMultiChunksToDownload(List<FileVersion> restoreFileVersions, MemDatabase databaseBeforeRestoreTime) throws Exception {
+		Set<MultiChunkEntry> multiChunksToDownload = new HashSet<MultiChunkEntry>();
 		
-		for (IFileVersion restoreFileVersion : restoreFileVersions) {
+		for (FileVersion restoreFileVersion : restoreFileVersions) {
 			multiChunksToDownload.addAll(determineMultiChunksToDownload(restoreFileVersion, databaseBeforeRestoreTime));
 		}
 		
 		return multiChunksToDownload;
 	}
 
-	private List<IFileVersion> getLastFileVersionsByPath(List<String> restoreFilePaths, Database databaseBeforeRestoreTime) {
-		List<IFileVersion> restoreFileVersions = new ArrayList<IFileVersion>();
+	private List<FileVersion> getLastFileVersionsByPath(List<String> restoreFilePaths, MemDatabase databaseBeforeRestoreTime) {
+		List<FileVersion> restoreFileVersions = new ArrayList<FileVersion>();
 		
 		for (String restoreFilePath : restoreFilePaths) {
-			IPartialFileHistory restoreFileHistory = databaseBeforeRestoreTime.getFileHistory(restoreFilePath);
+			PartialFileHistory restoreFileHistory = databaseBeforeRestoreTime.getFileHistory(restoreFilePath);
 			
 			if (restoreFileHistory != null) {
 				restoreFileVersions.add(restoreFileHistory.getLastVersion());
@@ -182,12 +182,12 @@ public class RestoreOperation extends Operation {
 		return restoreFileVersions;
 	}
 
-	private Collection<IMultiChunkEntry> determineMultiChunksToDownload(IFileVersion fileVersion, Database database) throws Exception {
+	private Collection<MultiChunkEntry> determineMultiChunksToDownload(FileVersion fileVersion, MemDatabase database) throws Exception {
 		// TODO [medium] Duplicate code in DownOperation
-		Set<IMultiChunkEntry> multiChunksToDownload = new HashSet<IMultiChunkEntry>();		
+		Set<MultiChunkEntry> multiChunksToDownload = new HashSet<MultiChunkEntry>();		
 		
 		if (fileVersion.getSize() != null && fileVersion.getSize() > 0) {
-			IFileContent fileContent = database.getContent(fileVersion.getChecksum());
+			FileContent fileContent = database.getContent(fileVersion.getChecksum());
 			
 			boolean fileHasContent = fileContent != null;
 			
@@ -195,7 +195,7 @@ public class RestoreOperation extends Operation {
 				Collection<ChunkEntryId> fileChunks = fileContent.getChunks(); // TODO [medium] Instead of just looking for multichunks to download here, we should look for chunks in local files as well and return the chunk positions in the local files ChunkPosition (chunk123 at file12, offset 200, size 250)
 				
 				for (ChunkEntryId chunkChecksum : fileChunks) {
-					IMultiChunkEntry multiChunkForChunk = database.getMultiChunkForChunk(chunkChecksum);
+					MultiChunkEntry multiChunkForChunk = database.getMultiChunkForChunk(chunkChecksum);
 					
 					if (multiChunkForChunk == null) {
 						throw new Exception("Cannot find multichunk "+StringUtil.toHex(chunkChecksum.getArray())); 
@@ -213,13 +213,13 @@ public class RestoreOperation extends Operation {
 	}
 	
 
-	private void downloadAndDecryptMultiChunks(Set<IMultiChunkEntry> unknownMultiChunks) throws StorageException, IOException {
+	private void downloadAndDecryptMultiChunks(Set<MultiChunkEntry> unknownMultiChunks) throws StorageException, IOException {
 		// TODO [medium] Duplicate code in DownOperation
 		
 		logger.log(Level.INFO, "- Downloading and extracting multichunks ...");
 		TransferManager transferManager = config.getConnection().createTransferManager();
 		
-		for (IMultiChunkEntry multiChunkEntry : unknownMultiChunks) {
+		for (MultiChunkEntry multiChunkEntry : unknownMultiChunks) {
 			File localEncryptedMultiChunkFile = config.getCache().getEncryptedMultiChunkFile(multiChunkEntry.getId());
 			File localDecryptedMultiChunkFile = config.getCache().getDecryptedMultiChunkFile(multiChunkEntry.getId());
 			MultiChunkRemoteFile remoteMultiChunkFile = new MultiChunkRemoteFile(multiChunkEntry.getId()); 
@@ -244,10 +244,10 @@ public class RestoreOperation extends Operation {
 		transferManager.disconnect();
 	}
 
-	private Database getDatabaseBeforeRestoreTime(Database database, Date restoreDate) {
-		Database databaseBeforeRestoreTime = new Database();
+	private MemDatabase getDatabaseBeforeRestoreTime(MemDatabase database, Date restoreDate) {
+		MemDatabase databaseBeforeRestoreTime = new MemDatabase();
 		
-		for (IDatabaseVersion compareDatabaseVersion : database.getDatabaseVersions()) {
+		for (DatabaseVersion compareDatabaseVersion : database.getDatabaseVersions()) {
 			if (compareDatabaseVersion.getTimestamp().equals(restoreDate) || compareDatabaseVersion.getTimestamp().before(restoreDate)) {
 				databaseBeforeRestoreTime.addDatabaseVersion(compareDatabaseVersion);
 			}

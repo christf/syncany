@@ -17,87 +17,20 @@
  */
 package org.syncany.database;
 
-import java.util.Arrays;
-
-import org.syncany.database.persistence.IChunkEntry;
-import org.syncany.util.ByteArray;
-import org.syncany.util.StringUtil;
 
 
 /**
  *
  * @author pheckel
  */
-public class ChunkEntry implements IChunkEntry {
-    private byte[] checksum;      
-    private int size;    
+public interface ChunkEntry {
 
-    public ChunkEntry(byte[] checksum, int size) {
-        this.checksum = checksum;
-        this.size = size;
-    }    
+    public void setSize(int chunksize);
 
-    public void setSize(int chunksize) {
-        this.size = chunksize;
-    }
-
-    public int getSize() {
-        return size;
-    }   
+    public int getSize();
     
-    public byte[] getChecksum() {
-        return checksum;
-    }
+    public byte[] getChecksum();
+    
+    public void setChecksum(byte[] checksum);
 
-    public void setChecksum(byte[] checksum) {
-        this.checksum = checksum;
-    }
-
-	@Override
-	public String toString() {
-		return "ChunkEntry [checksum=" + StringUtil.toHex(checksum) + ", size=" + size + "]";
-	}
-
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + Arrays.hashCode(checksum);
-		result = prime * result + size;
-		return result;
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		ChunkEntry other = (ChunkEntry) obj;
-		if (!Arrays.equals(checksum, other.checksum))
-			return false;
-		if (size != other.size)
-			return false;
-		return true;
-	}   
-	
-	/**
-	 * Identifies a chunk entry (= chunk checksum)
-	 * TODO [low] Cleanup chunk entry id usage in application. What about a MultiChunkEntryId, FileContentId, ...
-	 */
-	public static class ChunkEntryId extends ByteArray {
-		public ChunkEntryId() {
-			super();
-		}
-
-		public ChunkEntryId(byte[] array, int offset, int length) {
-			super(array, offset, length);
-		}
-
-		public ChunkEntryId(byte[] array) {
-			super(array);
-		}
-	}
 }

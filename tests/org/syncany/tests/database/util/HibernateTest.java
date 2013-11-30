@@ -9,24 +9,24 @@ import java.util.List;
 import java.util.Random;
 
 import org.junit.Test;
-import org.syncany.database.ChunkEntry.ChunkEntryId;
+import org.syncany.database.ChunkEntry;
+import org.syncany.database.FileContent;
+import org.syncany.database.FileVersion;
+import org.syncany.database.MultiChunkEntry;
+import org.syncany.database.PartialFileHistory;
 import org.syncany.database.VectorClock;
-import org.syncany.database.dao.DAO;
-import org.syncany.database.persistence.ChunkEntity;
-import org.syncany.database.persistence.ChunkIdEntity;
-import org.syncany.database.persistence.DatabaseVersionEntity;
-import org.syncany.database.persistence.DatabaseVersionHeaderEntity;
-import org.syncany.database.persistence.FileContentEntity;
-import org.syncany.database.persistence.FileVersionEntity;
-import org.syncany.database.persistence.IChunkEntry;
-import org.syncany.database.persistence.IFileContent;
-import org.syncany.database.persistence.IFileVersion;
-import org.syncany.database.persistence.IFileVersion.FileStatus;
-import org.syncany.database.persistence.IFileVersion.FileType;
-import org.syncany.database.persistence.IMultiChunkEntry;
-import org.syncany.database.persistence.IPartialFileHistory;
-import org.syncany.database.persistence.MultiChunkEntity;
-import org.syncany.database.persistence.PartialFileHistoryEntity;
+import org.syncany.database.FileVersion.FileStatus;
+import org.syncany.database.FileVersion.FileType;
+import org.syncany.database.mem.MemChunkEntry.ChunkEntryId;
+import org.syncany.database.sql.SqlChunkEntry;
+import org.syncany.database.sql.ChunkIdEntity;
+import org.syncany.database.sql.DAO;
+import org.syncany.database.sql.SqlDatabaseVersionEntity;
+import org.syncany.database.sql.SqlDatabaseVersionHeaderEntity;
+import org.syncany.database.sql.SqlFileContentEntity;
+import org.syncany.database.sql.SqlFileVersionEntity;
+import org.syncany.database.sql.SqlMultiChunkEntry;
+import org.syncany.database.sql.SqlPartialFileHistoryEntity;
 import org.syncany.tests.util.TestFileUtil;
 import org.syncany.util.StringUtil;
 
@@ -34,14 +34,14 @@ public class HibernateTest {
 
 	@Test
 	public void testWriteReadDatabaseVersionHibernate() throws InterruptedException {
-		DAO<DatabaseVersionEntity> dao = new DAO<DatabaseVersionEntity>(DatabaseVersionEntity.class);
+		DAO<SqlDatabaseVersionEntity> dao = new DAO<SqlDatabaseVersionEntity>(SqlDatabaseVersionEntity.class);
 		Random rand = new Random();
 
-		DatabaseVersionEntity databaseVersion = new DatabaseVersionEntity();
+		SqlDatabaseVersionEntity databaseVersion = new SqlDatabaseVersionEntity();
 
 		//Create DBV 
 		
-		DatabaseVersionHeaderEntity header = new DatabaseVersionHeaderEntity();
+		SqlDatabaseVersionHeaderEntity header = new SqlDatabaseVersionHeaderEntity();
 		header.setClient("8");
 		Date setDate = new Date();
 		header.setDate(setDate);
@@ -50,13 +50,13 @@ public class HibernateTest {
 		header.setVectorClock(vectorClock);
 		databaseVersion.setHeader(header);
 
-		List<ChunkEntity> chunks = new ArrayList<ChunkEntity>();
-		MultiChunkEntity multiChunk = new MultiChunkEntity(TestFileUtil.createRandomArray(10));
-		FileContentEntity fileContent = new FileContentEntity(TestFileUtil.createRandomArray(rand.nextInt(100)), 512);
+		List<SqlChunkEntry> chunks = new ArrayList<SqlChunkEntry>();
+		SqlMultiChunkEntry multiChunk = new SqlMultiChunkEntry(TestFileUtil.createRandomArray(10));
+		SqlFileContentEntity fileContent = new SqlFileContentEntity(TestFileUtil.createRandomArray(rand.nextInt(100)), 512);
 		
 		//Generate Chunks
 		for(int i = 0; i < 20; i++) {
-			ChunkEntity chunk = new ChunkEntity(TestFileUtil.createRandomArray(rand.nextInt(100) ), 512);
+			SqlChunkEntry chunk = new SqlChunkEntry(TestFileUtil.createRandomArray(rand.nextInt(100) ), 512);
 			chunks.add(chunk);
 			
 			fileContent.addChunk(new ChunkEntryId(chunk.getChecksum()));
@@ -65,7 +65,7 @@ public class HibernateTest {
 			multiChunk.addChunk(new ChunkEntryId(chunk.getChecksum()));
 			if(i % 9 == 0) {
 				databaseVersion.addMultiChunk(multiChunk);
-				multiChunk = new MultiChunkEntity(TestFileUtil.createRandomArray(10)); 
+				multiChunk = new SqlMultiChunkEntry(TestFileUtil.createRandomArray(10)); 
 			}
 		}
 		databaseVersion.addMultiChunk(multiChunk);
@@ -73,10 +73,10 @@ public class HibernateTest {
 		
 		//Generate FileVersion + FileHistory
 		
-		PartialFileHistoryEntity fileHistory = new PartialFileHistoryEntity(rand.nextLong());
+		SqlPartialFileHistoryEntity fileHistory = new SqlPartialFileHistoryEntity(rand.nextLong());
 		
 		for(long i = 1; i < 10; i++) {
-			FileVersionEntity fileVersion = createFileVersionEntity();
+			SqlFileVersionEntity fileVersion = createFileVersionEntity();
 			fileVersion.setVersion(Long.valueOf(i));
 			fileVersion.setPath("Path Version - " + i);
 			fileHistory.addFileVersion(fileVersion);	
@@ -86,7 +86,7 @@ public class HibernateTest {
 		
 		databaseVersion = dao.save(databaseVersion);
 		Thread.sleep(5000);
-		DatabaseVersionEntity persisted = dao.get((DatabaseVersionHeaderEntity)databaseVersion.getHeader());
+		SqlDatabaseVersionEntity persisted = dao.get((SqlDatabaseVersionHeaderEntity)databaseVersion.getHeader());
 	
 		persisted = dao.save(persisted);
 		
@@ -100,16 +100,16 @@ public class HibernateTest {
 		
 		checkChunkOrderInFileContent(chunks, persisted);
 			
-		List<DatabaseVersionEntity> entities = dao.getAll();
+		List<SqlDatabaseVersionEntity> entities = dao.getAll();
 		
-		for (DatabaseVersionEntity databaseVersionEntity : entities) {
+		for (SqlDatabaseVersionEntity databaseVersionEntity : entities) {
 			System.out.println("Header : " + databaseVersionEntity.getHeader());
-			for(IChunkEntry chunk : databaseVersionEntity.getChunks()) {
+			for(ChunkEntry chunk : databaseVersionEntity.getChunks()) {
 				System.out.println("	Chunk : " + StringUtil.toHex(chunk.getChecksum()));
 			}
 			
 			System.out.println("MultiChunks");
-			for (IMultiChunkEntry multiChunkEntry : databaseVersionEntity.getMultiChunks()) {
+			for (MultiChunkEntry multiChunkEntry : databaseVersionEntity.getMultiChunks()) {
 				System.out.println("MultiChunk: " + StringUtil.toHex(multiChunkEntry.getId()));
 				for (ChunkEntryId chunkId : multiChunkEntry.getChunks()) {
 					System.out.println("	ChunkId: " +  StringUtil.toHex(chunkId.getArray()));
@@ -117,7 +117,7 @@ public class HibernateTest {
 			}
 			
 			System.out.println("FileContents");
-			for (IFileContent filecontent : databaseVersionEntity.getFileContents()) {
+			for (FileContent filecontent : databaseVersionEntity.getFileContents()) {
 				System.out.println("FileContent: " + StringUtil.toHex(filecontent.getChecksum()));
 				for (ChunkEntryId chunkId : filecontent.getChunks()) {
 					System.out.println("	ChunkId: " +  StringUtil.toHex(chunkId.getArray()));
@@ -125,18 +125,18 @@ public class HibernateTest {
 			}
 			
 			System.out.println("FileHistories");
-			for (IPartialFileHistory entity : databaseVersionEntity.getFileHistories()) {
+			for (PartialFileHistory entity : databaseVersionEntity.getFileHistories()) {
 				System.out.println("File ID: " + entity.getFileId());
 				System.out.println("FileVersions: ");
-				for (IFileVersion version : entity.getFileVersions().values()) {
+				for (FileVersion version : entity.getFileVersions().values()) {
 					System.out.println(version.getPath() + "; checksum: " + StringUtil.toHex(version.getChecksum()));
 				}
 			}
 		}
 	}
 
-	private void checkChunkOrderInFileContent(List<ChunkEntity> chunks, DatabaseVersionEntity persisted) {
-		Collection<IFileContent> persistedFileContents = persisted.getFileContents();
+	private void checkChunkOrderInFileContent(List<SqlChunkEntry> chunks, SqlDatabaseVersionEntity persisted) {
+		Collection<FileContent> persistedFileContents = persisted.getFileContents();
 		Collection<ChunkEntryId> persistedContentChunks = persistedFileContents.iterator().next().getChunks();
 		for (int i = 0; i < persistedFileContents.size(); i++) {
 			ChunkEntryId persistedChunk = persistedContentChunks.iterator().next();
@@ -146,31 +146,31 @@ public class HibernateTest {
 
 	@Test
 	public void testWriteReadChunkEntity() throws InterruptedException {
-		DAO<ChunkEntity> dao = new DAO<ChunkEntity>(ChunkEntity.class);
+		DAO<SqlChunkEntry> dao = new DAO<SqlChunkEntry>(SqlChunkEntry.class);
 		
 		Random rand = new Random();
 
-		ChunkEntity chunk = new ChunkEntity(TestFileUtil.createRandomArray(rand.nextInt(100) ), 512);
+		SqlChunkEntry chunk = new SqlChunkEntry(TestFileUtil.createRandomArray(rand.nextInt(100) ), 512);
 		chunk = dao.save(chunk);
 		Thread.sleep(5000);
-		ChunkEntity persisted = dao.getById(StringUtil.toHex(chunk.getChecksum()));
+		SqlChunkEntry persisted = dao.getById(StringUtil.toHex(chunk.getChecksum()));
 		
 		assertEquals(chunk,persisted);
 		
-		List<ChunkEntity> entities = dao.getAll();
+		List<SqlChunkEntry> entities = dao.getAll();
 		
-		for (ChunkEntity entity : entities) {
+		for (SqlChunkEntry entity : entities) {
 			System.out.println(entity.getChecksum());
 		}
 	}
 	
 	@Test
 	public void testWriteReadMultiChunkEntity() throws InterruptedException {
-		DAO<MultiChunkEntity> dao = new DAO<MultiChunkEntity>(MultiChunkEntity.class);
+		DAO<SqlMultiChunkEntry> dao = new DAO<SqlMultiChunkEntry>(SqlMultiChunkEntry.class);
 		
 		Random rand = new Random();
 
-		MultiChunkEntity multiChunk = new MultiChunkEntity(TestFileUtil.createRandomArray(rand.nextInt(100)));
+		SqlMultiChunkEntry multiChunk = new SqlMultiChunkEntry(TestFileUtil.createRandomArray(rand.nextInt(100)));
 		
 		for(int i = 0; i < 1; i++) {
 			multiChunk.addChunk(new ChunkIdEntity(TestFileUtil.createRandomArray(rand.nextInt(100))));
@@ -178,40 +178,40 @@ public class HibernateTest {
 		
 		multiChunk = dao.save(multiChunk);
 		Thread.sleep(5000);
-		MultiChunkEntity persisted = dao.getById(multiChunk.getIdEncoded());
+		SqlMultiChunkEntry persisted = dao.getById(multiChunk.getIdEncoded());
 		
 		assertEquals(multiChunk.getIdEncoded(),persisted.getIdEncoded());
 		assertEquals(multiChunk.getChunks().size(),persisted.getChunks().size());
 		
-		List<MultiChunkEntity> entities = dao.getAll();
+		List<SqlMultiChunkEntry> entities = dao.getAll();
 		
-		for (MultiChunkEntity entity : entities) {
+		for (SqlMultiChunkEntry entity : entities) {
 			System.out.println(entity.getIdEncoded());
 		}
 	}
 	
 	@Test
 	public void testWriteReadFileVersionEntity() throws InterruptedException {
-		DAO<FileVersionEntity> dao = new DAO<FileVersionEntity>(FileVersionEntity.class);
+		DAO<SqlFileVersionEntity> dao = new DAO<SqlFileVersionEntity>(SqlFileVersionEntity.class);
 		
 
-		FileVersionEntity fileVersion = createFileVersionEntity();
+		SqlFileVersionEntity fileVersion = createFileVersionEntity();
 		
 		fileVersion = dao.save(fileVersion);
 		Thread.sleep(5000);
-		FileVersionEntity persisted = dao.getById(fileVersion.getChecksumEncoded());
+		SqlFileVersionEntity persisted = dao.getById(fileVersion.getChecksumEncoded());
 		
 		assertEquals(persisted,fileVersion);
 
-		List<FileVersionEntity> entities = dao.getAll();
+		List<SqlFileVersionEntity> entities = dao.getAll();
 		
-		for (FileVersionEntity entity : entities) {
+		for (SqlFileVersionEntity entity : entities) {
 			System.out.println(entity.getChecksumEncoded());
 		}
 	}
 
-	private FileVersionEntity createFileVersionEntity() {
-		FileVersionEntity fileVersion = new FileVersionEntity();
+	private SqlFileVersionEntity createFileVersionEntity() {
+		SqlFileVersionEntity fileVersion = new SqlFileVersionEntity();
 		
 		Random rand = new Random();
 
@@ -226,14 +226,14 @@ public class HibernateTest {
 	
 	@Test
 	public void testWriteReadPartialFileHistoryEntity() throws InterruptedException {
-		DAO<PartialFileHistoryEntity> dao = new DAO<PartialFileHistoryEntity>(PartialFileHistoryEntity.class);
+		DAO<SqlPartialFileHistoryEntity> dao = new DAO<SqlPartialFileHistoryEntity>(SqlPartialFileHistoryEntity.class);
 		
 		Random rand = new Random();
 
-		PartialFileHistoryEntity fileHistory = new PartialFileHistoryEntity(rand.nextLong());
+		SqlPartialFileHistoryEntity fileHistory = new SqlPartialFileHistoryEntity(rand.nextLong());
 		
 		for(long i = 1; i < 10; i++) {
-			FileVersionEntity fileVersion = createFileVersionEntity();
+			SqlFileVersionEntity fileVersion = createFileVersionEntity();
 			fileVersion.setVersion(Long.valueOf(i));
 			fileVersion.setPath("Path Version - " + i);
 			fileHistory.addFileVersion(fileVersion);	
@@ -241,22 +241,22 @@ public class HibernateTest {
 		
 		fileHistory = dao.save(fileHistory);
 		Thread.sleep(5000);
-		PartialFileHistoryEntity persisted = dao.getById(fileHistory.getFileId());
+		SqlPartialFileHistoryEntity persisted = dao.getById(fileHistory.getFileId());
 		
 		assertEquals(persisted, fileHistory);
 
-		Collection<IFileVersion> persistedFileVersions = persisted.getFileVersions().values();
-		Collection<IFileVersion> originalFileVersions = fileHistory.getFileVersions().values();
+		Collection<FileVersion> persistedFileVersions = persisted.getFileVersions().values();
+		Collection<FileVersion> originalFileVersions = fileHistory.getFileVersions().values();
 		for (int i = 0; i < persistedFileVersions.size(); i++) {
 			assertEquals(persistedFileVersions.iterator().next().getVersion(), originalFileVersions.iterator().next().getVersion());
 		}
 		
-		List<PartialFileHistoryEntity> entities = dao.getAll();
+		List<SqlPartialFileHistoryEntity> entities = dao.getAll();
 		
-		for (PartialFileHistoryEntity entity : entities) {
+		for (SqlPartialFileHistoryEntity entity : entities) {
 			System.out.println("File ID: " + entity.getFileId());
 			System.out.println("FileVersions: ");
-			for (IFileVersion version : entity.getFileVersions().values()) {
+			for (FileVersion version : entity.getFileVersions().values()) {
 				System.out.println(version.getPath() + "; checksum: " + StringUtil.toHex(version.getChecksum()));
 			}
 		}

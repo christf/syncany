@@ -22,20 +22,18 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import org.syncany.database.persistence.IDatabaseVersionHeader;
-
 public class Branch {
-	private ArrayList<IDatabaseVersionHeader> branch;
+	private ArrayList<DatabaseVersionHeader> branch;
 	
 	public Branch() {
-		this.branch = new ArrayList<IDatabaseVersionHeader>();
+		this.branch = new ArrayList<DatabaseVersionHeader>();
 	}
 	
-	public void add(IDatabaseVersionHeader header) {
+	public void add(DatabaseVersionHeader header) {
 		branch.add(header);		
 	}	
 	
-	public void addAll(List<IDatabaseVersionHeader> headers) {
+	public void addAll(List<DatabaseVersionHeader> headers) {
 		branch.addAll(headers);
 	}	
 	
@@ -43,7 +41,7 @@ public class Branch {
 		return branch.size();
 	}
 	
-	public IDatabaseVersionHeader get(int index) {
+	public DatabaseVersionHeader get(int index) {
 		try {
 			return branch.get(index);
 		}
@@ -53,8 +51,8 @@ public class Branch {
 	}
 	
 	// TODO [medium] Performance: Use map instead of list
-	public IDatabaseVersionHeader get(VectorClock vectorClock) {
-		for (IDatabaseVersionHeader databaseVersionHeader : branch) {
+	public DatabaseVersionHeader get(VectorClock vectorClock) {
+		for (DatabaseVersionHeader databaseVersionHeader : branch) {
 			if (databaseVersionHeader.getVectorClock().equals(vectorClock)) {
 				return databaseVersionHeader;
 			}
@@ -63,11 +61,11 @@ public class Branch {
 		return null;
 	}
 
-	public List<IDatabaseVersionHeader> getAll() {
+	public List<DatabaseVersionHeader> getAll() {
 		return Collections.unmodifiableList(branch);
 	}	
 	
-	public IDatabaseVersionHeader getLast() {
+	public DatabaseVersionHeader getLast() {
 		return branch.get(branch.size()-1);
 	}	
 	
@@ -84,7 +82,7 @@ public class Branch {
 		return branch.toString();
 	}
 	
-	public class BranchIterator implements Iterator<IDatabaseVersionHeader> {		
+	public class BranchIterator implements Iterator<DatabaseVersionHeader> {		
         private int current;
         
         public BranchIterator(int current) {
@@ -101,11 +99,11 @@ public class Branch {
 		}
 
 		@Override
-		public IDatabaseVersionHeader next() {
+		public DatabaseVersionHeader next() {
 			return branch.get(current++);
 		}
 		
-		public IDatabaseVersionHeader previous() {
+		public DatabaseVersionHeader previous() {
 			return branch.get(current--);
 		}
 

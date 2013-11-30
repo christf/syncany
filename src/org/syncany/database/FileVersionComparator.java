@@ -34,15 +34,15 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.syncany.database.persistence.IFileVersion;
-import org.syncany.database.persistence.IFileVersion.FileStatus;
-import org.syncany.database.persistence.IFileVersion.FileType;
+import org.syncany.database.FileVersion.FileStatus;
+import org.syncany.database.FileVersion.FileType;
+import org.syncany.database.mem.MemFileVersion;
 import org.syncany.util.FileUtil;
 import org.syncany.util.StringUtil;
 
 /**
- * The file version comparator is a helper class to compare {@link FileVersion}s with each 
- * other, or compare {@link FileVersion}s to local {@link File}s. 
+ * The file version comparator is a helper class to compare {@link MemFileVersion}s with each 
+ * other, or compare {@link MemFileVersion}s to local {@link File}s. 
  * 
  * <p>It captures the {@link FileProperties} of two files or file versions and compares them
  * using the various <tt>compare*</tt>-methods. A comparison returns a set of {@link FileChange}s,
@@ -67,7 +67,7 @@ public class FileVersionComparator {
 	 * 
 	 * <p>The <tt>rootFolder</tt> is needed to allow a comparison of the relative file path.
 	 * The <tt>checksumAlgorithm</tt> is used for calculate and compare file checksums. Both
-	 * are used if a local {@link File} is compared to a {@link FileVersion}.
+	 * are used if a local {@link File} is compared to a {@link MemFileVersion}.
 	 * 
 	 * @param rootFolder Base folder to determine a relative path to 
 	 * @param checksumAlgorithm Digest algorithm for checksum calculation, e.g. "SHA1" or "MD5"
@@ -78,13 +78,13 @@ public class FileVersionComparator {
 	}
 
 	/**
-	 * Compares two {@link IFileVersion}s to each other and returns a {@link FileVersionComparison} object.
+	 * Compares two {@link FileVersion}s to each other and returns a {@link FileVersionComparison} object.
 	 * 
 	 * @param expectedFileVersion The expected file version (that is compared to the actual file version)
 	 * @param actualFileVersion The actual file version (that is compared to the expected file version)
 	 * @return Returns a file version comparison object, indicating if there are differences between the file versions
 	 */
-	public FileVersionComparison compare(IFileVersion expectedFileVersion, IFileVersion actualFileVersion) {
+	public FileVersionComparison compare(FileVersion expectedFileVersion, FileVersion actualFileVersion) {
 		FileProperties expectedFileProperties = captureFileProperties(expectedFileVersion);
 		FileProperties actualFileProperties = captureFileProperties(actualFileVersion);
 
@@ -92,7 +92,7 @@ public class FileVersionComparator {
 	}
 
 	/**
-	 * Compares a {@link IFileVersion} with a local {@link File} and returns a {@link FileVersionComparison} object.
+	 * Compares a {@link FileVersion} with a local {@link File} and returns a {@link FileVersionComparison} object.
 	 * 
 	 * <p>If the actual file does not differ in size, it is necessary to calculate and compare the checksum of the
 	 * local file to the file version to reliably determine if it has changed. Unless comparing the size and last 
@@ -103,12 +103,12 @@ public class FileVersionComparator {
 	 * @param actualFileForceChecksum Force a checksum comparison if necessary (if size does not differ)
 	 * @return Returns a file version comparison object, indicating if there are differences between the file versions
 	 */
-	public FileVersionComparison compare(IFileVersion expectedFileVersion, File actualFile, boolean actualFileForceChecksum) {
+	public FileVersionComparison compare(FileVersion expectedFileVersion, File actualFile, boolean actualFileForceChecksum) {
 		return compare(expectedFileVersion, actualFile, null, actualFileForceChecksum);
 	}
 
 	/**
-	 * Compares a {@link IFileVersion} with a local {@link File} and returns a {@link FileVersionComparison} object.
+	 * Compares a {@link FileVersion} with a local {@link File} and returns a {@link FileVersionComparison} object.
 	 * 
 	 * <p>If the actual file does not differ in size, it is necessary to calculate and compare the checksum of the
 	 * local file to the file version to reliably determine if it has changed. Unless comparing the size and last 
@@ -124,7 +124,7 @@ public class FileVersionComparator {
 	 * @param actualFileForceChecksum Force a checksum comparison if necessary (if size does not differ)
 	 * @return Returns a file version comparison object, indicating if there are differences between the file versions
 	 */
-	public FileVersionComparison compare(IFileVersion expectedLocalFileVersion, File actualLocalFile, byte[] actualFileKnownChecksum,
+	public FileVersionComparison compare(FileVersion expectedLocalFileVersion, File actualLocalFile, byte[] actualFileKnownChecksum,
 			boolean actualFileForceChecksum) {
 
 		FileProperties expectedLocalFileVersionProperties = captureFileProperties(expectedLocalFileVersion);
@@ -438,7 +438,7 @@ public class FileVersionComparator {
 		}
 	}
 
-	public FileProperties captureFileProperties(IFileVersion fileVersion) {
+	public FileProperties captureFileProperties(FileVersion fileVersion) {
 		if (fileVersion == null) {
 			return null;
 		}

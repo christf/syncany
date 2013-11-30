@@ -39,8 +39,8 @@ import java.util.Set;
 import org.junit.Test;
 import org.syncany.connection.plugins.Connection;
 import org.syncany.connection.plugins.local.LocalConnection;
-import org.syncany.database.Database;
-import org.syncany.database.persistence.IDatabaseVersion;
+import org.syncany.database.DatabaseVersion;
+import org.syncany.database.mem.MemDatabase;
 import org.syncany.operations.StatusOperation.StatusOperationResult;
 import org.syncany.operations.UpOperation.UpOperationResult;
 import org.syncany.tests.scenarios.framework.ClientActions;
@@ -126,8 +126,8 @@ public class FileLockedScenarioTest {
 		assertTrue("File should be uploaded while it is read-only.", upResult.getChangeSet().hasChanges());
 		
 		// Test 2: Check database for inconsistencies
-		Database database = client.loadLocalDatabase();
-		IDatabaseVersion databaseVersion = database.getLastDatabaseVersion();
+		MemDatabase database = client.loadLocalDatabase();
+		DatabaseVersion databaseVersion = database.getLastDatabaseVersion();
 
 		assertNotNull("There should be a new database version, because file should have been added.", databaseVersion);
 		
@@ -145,8 +145,8 @@ public class FileLockedScenarioTest {
 		assertFalse("File should NOT be uploaded while it is locked.", upResult.getChangeSet().hasChanges());
 		
 		// Test 2: Check database for inconsistencies
-		Database database = client.loadLocalDatabase();
-		IDatabaseVersion databaseVersion = database.getLastDatabaseVersion();
+		MemDatabase database = client.loadLocalDatabase();
+		DatabaseVersion databaseVersion = database.getLastDatabaseVersion();
 
 		assertNull("File should NOT be uploaded while it is locked.", database.getFileHistory("large-test-file"));		
 		assertNull("There should NOT be a new database version, because file should not have been added.", databaseVersion);

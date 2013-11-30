@@ -32,8 +32,8 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
-import org.syncany.database.persistence.IFileVersion;
-import org.syncany.database.persistence.IPartialFileHistory;
+import org.syncany.database.FileVersion;
+import org.syncany.database.PartialFileHistory;
 import org.syncany.operations.LogOperation;
 import org.syncany.operations.LogOperation.LogOperationOptions;
 import org.syncany.operations.LogOperation.LogOperationResult;
@@ -87,7 +87,7 @@ public class LogCommand extends Command {
 		return operationOptions;
 	}
 
-	private void printOneVersion(IFileVersion fileVersion) {
+	private void printOneVersion(FileVersion fileVersion) {
 		String posixPermissions = (fileVersion.getPosixPermissions() != null) ? fileVersion.getPosixPermissions() : "";
 		String dosAttributes = (fileVersion.getDosAttributes() != null) ? fileVersion.getDosAttributes() : "";
 
@@ -96,13 +96,13 @@ public class LogCommand extends Command {
 				StringUtil.toHex(fileVersion.getChecksum()));
 	}
 
-	private int longestPath(List<IPartialFileHistory> fileHistories, boolean lastOnly) {
+	private int longestPath(List<PartialFileHistory> fileHistories, boolean lastOnly) {
 		int result = 0;
-		for (IPartialFileHistory fileHistory : fileHistories) {
+		for (PartialFileHistory fileHistory : fileHistories) {
 			if (lastOnly) {
 				result = Math.max(result, fileHistory.getLastVersion().getPath().length());
 			} else {
-				for (IFileVersion fileVersion : fileHistory.getFileVersions().values()) {
+				for (FileVersion fileVersion : fileHistory.getFileVersions().values()) {
 					result = Math.max(result, fileVersion.getPath().length());
 				}
 			}
@@ -115,14 +115,14 @@ public class LogCommand extends Command {
 		if (operationResult.getFormat().equals("last")) {
 			longestPath = longestPath(operationResult.getFileHistories(), true);
 		}
-		for (IPartialFileHistory fileHistory : operationResult.getFileHistories()) {
-			IFileVersion lastVersion = fileHistory.getLastVersion();
+		for (PartialFileHistory fileHistory : operationResult.getFileHistories()) {
+			FileVersion lastVersion = fileHistory.getLastVersion();
 			switch (operationResult.getFormat()) {
 			case "full":
 				Iterator<Long> fileVersionNumber = fileHistory.getDescendingVersionNumber();
 				out.printf("%s %16x\n", lastVersion.getPath(), fileHistory.getFileId());
 				while (fileVersionNumber.hasNext()) {
-					IFileVersion fileVersion = fileHistory.getFileVersion(fileVersionNumber.next());
+					FileVersion fileVersion = fileHistory.getFileVersion(fileVersionNumber.next());
 					out.print('\t');
 					printOneVersion(fileVersion);
 					if (fileVersion.getPath().equals(lastVersion.getPath())) {

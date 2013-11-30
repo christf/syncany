@@ -15,75 +15,49 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.syncany.database.persistence;
+package org.syncany.database.mem;
 
 import java.io.File;
-import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Date;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.Id;
-import javax.persistence.Table;
-import javax.persistence.Transient;
-
-import org.hibernate.CallbackException;
-import org.hibernate.Session;
-import org.hibernate.classic.Lifecycle;
+import org.syncany.database.FileVersion;
 import org.syncany.util.StringUtil;
 
-@Entity
-@Table (name = "FileVersionEntity")
-public class FileVersionEntity implements IFileVersion, Lifecycle {
-	
+/**
+ * A file version represents a version of a file at a certain time and captures
+ * all of a file's properties. 
+ * 
+ * <p>A {@link MemPartialFileHistory} typically consists of multiple <tt>FileVersion</tt>s,  
+ * each of which is the incarnation of the same file, but with either changed properties,
+ * or changed content.
+ * 
+ * <p>The <tt>FileVersion</tt>'s checksum attribute implicitly links to a {@link MemFileContent},
+ * which represents the content of a file. Multiple file versions can link to the same file content.
+ * 
+ * @see MemPartialFileHistory
+ * @author Philipp C. Heckel <philipp.heckel@gmail.com>
+ */
+public class MemFileVersion implements Cloneable, FileVersion {
 	// Mandatory
-	@Column(name = "version")
-    private Long version;   
-	
-	@Column(name = "path")
+    private Long version; // TODO [low] This can be an Integer. No need for a long!
     private String path;
-	
-	@Column(name = "type")
-	@Enumerated(EnumType.STRING)
     private FileType type; 
-	
-	@Column(name = "status")
-	@Enumerated(EnumType.STRING)
-    private FileStatus status;  
-	
-	@Column(name = "size")
+    private FileStatus status;    
     private Long size; 
-
-	@Column(name = "lastModified")
     private Date lastModified;
 
-	@Column(name = "linkTarget")
+    // Mandatory (if type is symlink)
     private String linkTarget;
     
     // Optional
-	@Column(name = "createdBy")
     private String createdBy;
-	
-	@Transient
     private byte[] checksum;
-	
-	@Id
-	@Column(name = "checksumEncoded")
-	private String checksumEncoded;
-	
-	@Column(name = "updated")
     private Date updated;
-	
-	@Column(name = "posixPermissions")
     private String posixPermissions;
-	
-	@Column(name = "dosAttributes")
     private String dosAttributes;
     
-    public FileVersionEntity() {
+    public MemFileVersion() {
         // Fressen.
     }      
 
@@ -153,7 +127,6 @@ public class FileVersionEntity implements IFileVersion, Lifecycle {
 
 	public void setChecksum(byte[] checksum) {
 		this.checksum = checksum;
-		this.checksumEncoded = StringUtil.toHex(checksum);
 	}
 
 	public Long getSize() { // TODO [low] Redundant field 'size', this field should not exist. Instead the content's size should be used. This was introduced as a convenience field. 
@@ -188,20 +161,6 @@ public class FileVersionEntity implements IFileVersion, Lifecycle {
 		this.dosAttributes = dosAttributes;
 	}
 
-	/**
-	 * @return the checksumEncoded
-	 */
-	public String getChecksumEncoded() {
-		return checksumEncoded;
-	}
-
-	/**
-	 * @param checksumEncoded the checksumEncoded to set
-	 */
-	public void setChecksumEncoded(String checksumEncoded) {
-		this.checksumEncoded = checksumEncoded;
-	}
-
 	@Override
 	public String toString() {
 		return "FileVersion [version=" + version + ", path=" + path + ", type=" + type + ", status=" + status + ", size=" + size + ", lastModified="
@@ -210,9 +169,9 @@ public class FileVersionEntity implements IFileVersion, Lifecycle {
 	}
 
 	@Override
-    public FileVersionEntity clone() {
+    public MemFileVersion clone() {
         try {
-            FileVersionEntity clone = (FileVersionEntity) super.clone();
+            MemFileVersion clone = (MemFileVersion) super.clone();
             
             clone.setChecksum(getChecksum());
             clone.setCreatedBy(getCreatedBy());
@@ -258,7 +217,7 @@ public class FileVersionEntity implements IFileVersion, Lifecycle {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		FileVersionEntity other = (FileVersionEntity) obj;
+		MemFileVersion other = (MemFileVersion) obj;
 		if (!Arrays.equals(checksum, other.checksum))
 			return false;
 		if (createdBy == null) {
@@ -298,26 +257,4 @@ public class FileVersionEntity implements IFileVersion, Lifecycle {
 		return true;
 	}
 
-	@Override
-	public boolean onSave(Session s) throws CallbackException {
-		this.checksumEncoded = StringUtil.toHex(checksum);
-		return false;
-	}
-
-	@Override
-	public boolean onUpdate(Session s) throws CallbackException {
-		this.checksumEncoded = StringUtil.toHex(checksum);
-		return false;
-	}
-
-	@Override
-	public boolean onDelete(Session s) throws CallbackException {
-		return false;
-	}
-
-	@Override
-	public void onLoad(Session s, Serializable id) {
-		checksum = StringUtil.fromHex(checksumEncoded);
-	}
-	
 }

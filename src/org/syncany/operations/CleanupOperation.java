@@ -23,23 +23,23 @@ import java.util.Date;
 import java.util.List;
 
 import org.syncany.config.Config;
-import org.syncany.database.Database;
-import org.syncany.database.persistence.IDatabaseVersion;
+import org.syncany.database.DatabaseVersion;
+import org.syncany.database.mem.MemDatabase;
 
 public class CleanupOperation extends Operation {
 
 	private CleanupOperationOptions options;
-	private Database database; 
+	private MemDatabase database; 
 	
 	public CleanupOperation(Config config) {
 		this(config, null);
 	}
 	
-	public CleanupOperation(Config config, Database database) {
+	public CleanupOperation(Config config, MemDatabase database) {
 		this(config, database, new CleanupOperationOptions());
 	}
 	
-	public CleanupOperation(Config config, Database database, CleanupOperationOptions options) {
+	public CleanupOperation(Config config, MemDatabase database, CleanupOperationOptions options) {
 		super(config);
 		this.options = options;
 		this.database = database;
@@ -48,7 +48,7 @@ public class CleanupOperation extends Operation {
 	@Override
 	public CleanupOperationResult execute() throws Exception {
 		//1. Identify DatabaseVersions older than x days
-		List<IDatabaseVersion> identifiedDatabaseVersions = identifyDatabaseVersions(options);
+		List<DatabaseVersion> identifiedDatabaseVersions = identifyDatabaseVersions(options);
 		
 		if(!identifiedDatabaseVersions.isEmpty()) {
 			//2. if > 1 -> Write Lockfile to repository
@@ -65,8 +65,8 @@ public class CleanupOperation extends Operation {
 		return null;
 	}
 	
-	public List<IDatabaseVersion> identifyDatabaseVersions(CleanupOperationOptions options) {
-		List<IDatabaseVersion> identifiedDatabaseVersions = new ArrayList<IDatabaseVersion>();
+	public List<DatabaseVersion> identifyDatabaseVersions(CleanupOperationOptions options) {
+		List<DatabaseVersion> identifiedDatabaseVersions = new ArrayList<DatabaseVersion>();
 		
 		switch(options.getStrategy()) {
 		case DAYRANGE:
@@ -74,10 +74,10 @@ public class CleanupOperation extends Operation {
 			calendar.add(Calendar.DATE, -options.getCleanUpOlderThanDays());  			
 
 			Date expiration = calendar.getTime();
-			List<IDatabaseVersion> existingDatabaseVersions = this.database.getDatabaseVersions();
+			List<DatabaseVersion> existingDatabaseVersions = this.database.getDatabaseVersions();
 			
 			// TODO [medium] Performance: inefficient
-			for (IDatabaseVersion databaseVersion : existingDatabaseVersions) {
+			for (DatabaseVersion databaseVersion : existingDatabaseVersions) {
 				if(databaseVersion.getTimestamp().before(expiration)) {
 					identifiedDatabaseVersions.add(databaseVersion);
 				}

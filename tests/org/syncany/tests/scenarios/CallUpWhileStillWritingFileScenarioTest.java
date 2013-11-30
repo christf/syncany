@@ -33,8 +33,8 @@ import org.junit.Test;
 import org.syncany.config.Logging;
 import org.syncany.connection.plugins.Connection;
 import org.syncany.connection.plugins.local.LocalConnection;
-import org.syncany.database.Database;
-import org.syncany.database.persistence.IDatabaseVersion;
+import org.syncany.database.DatabaseVersion;
+import org.syncany.database.mem.MemDatabase;
 import org.syncany.operations.StatusOperation.StatusOperationResult;
 import org.syncany.operations.UpOperation.UpOperationResult;
 import org.syncany.tests.util.TestClient;
@@ -102,8 +102,8 @@ public class CallUpWhileStillWritingFileScenarioTest {
 		assertFalse("File should NOT be uploaded while still writing (no half-file upload).", upResult.getChangeSet().hasChanges());
 		
 		// Test 2: Check database for inconsistencies
-		Database database = clientA.loadLocalDatabase();
-		IDatabaseVersion databaseVersion = database.getLastDatabaseVersion();
+		MemDatabase database = clientA.loadLocalDatabase();
+		DatabaseVersion databaseVersion = database.getLastDatabaseVersion();
 
 		assertNull("File should NOT be uploaded while still writing (no half-file upload).", database.getFileHistory("large-test-file"));		
 		assertNull("There should NOT be a new database version, because file should not have been added.", databaseVersion);

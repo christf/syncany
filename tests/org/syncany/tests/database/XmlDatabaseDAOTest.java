@@ -33,22 +33,22 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.syncany.config.Logging;
-import org.syncany.database.ChunkEntry;
-import org.syncany.database.ChunkEntry.ChunkEntryId;
-import org.syncany.database.Database;
 import org.syncany.database.DatabaseVersion;
 import org.syncany.database.FileContent;
-import org.syncany.database.FileVersion;
 import org.syncany.database.MultiChunkEntry;
 import org.syncany.database.PartialFileHistory;
 import org.syncany.database.VectorClock;
-import org.syncany.database.XmlDatabaseDAO;
-import org.syncany.database.persistence.IDatabaseVersion;
-import org.syncany.database.persistence.IFileContent;
-import org.syncany.database.persistence.IFileVersion.FileStatus;
-import org.syncany.database.persistence.IFileVersion.FileType;
-import org.syncany.database.persistence.IMultiChunkEntry;
-import org.syncany.database.persistence.IPartialFileHistory;
+import org.syncany.database.FileVersion.FileStatus;
+import org.syncany.database.FileVersion.FileType;
+import org.syncany.database.mem.MemChunkEntry;
+import org.syncany.database.mem.MemDatabase;
+import org.syncany.database.mem.MemDatabaseVersion;
+import org.syncany.database.mem.MemFileContent;
+import org.syncany.database.mem.MemFileVersion;
+import org.syncany.database.mem.MemMultiChunkEntry;
+import org.syncany.database.mem.MemPartialFileHistory;
+import org.syncany.database.mem.XmlDatabaseDAO;
+import org.syncany.database.mem.MemChunkEntry.ChunkEntryId;
 import org.syncany.tests.util.TestAssertUtil;
 import org.syncany.tests.util.TestDatabaseUtil;
 import org.syncany.tests.util.TestFileUtil;
@@ -73,14 +73,14 @@ public class XmlDatabaseDAOTest {
 	@Test
 	public void testWriteAndReadChunks() throws IOException {
 		// Prepare
-		Database newDatabase = new Database();
-		DatabaseVersion newDatabaseVersion = createDatabaseVersion();
+		MemDatabase newDatabase = new MemDatabase();
+		MemDatabaseVersion newDatabaseVersion = createDatabaseVersion();
 		
 		// Create chunks
-        ChunkEntry chunkA1 = new ChunkEntry(new byte[] { 1,2,3,4,5,7,8,9,0}, 12);
-        ChunkEntry chunkA2 = new ChunkEntry(new byte[] { 9,8,7,6,5,4,3,2,1}, 34);
-        ChunkEntry chunkA3 = new ChunkEntry(new byte[] { 1,1,1,1,1,1,1,1,1}, 56);
-        ChunkEntry chunkA4 = new ChunkEntry(new byte[] { 2,2,2,2,2,2,2,2,2}, 78);
+        MemChunkEntry chunkA1 = new MemChunkEntry(new byte[] { 1,2,3,4,5,7,8,9,0}, 12);
+        MemChunkEntry chunkA2 = new MemChunkEntry(new byte[] { 9,8,7,6,5,4,3,2,1}, 34);
+        MemChunkEntry chunkA3 = new MemChunkEntry(new byte[] { 1,1,1,1,1,1,1,1,1}, 56);
+        MemChunkEntry chunkA4 = new MemChunkEntry(new byte[] { 2,2,2,2,2,2,2,2,2}, 78);
         
         newDatabaseVersion.addChunk(chunkA1);
         newDatabaseVersion.addChunk(chunkA2);
@@ -91,7 +91,7 @@ public class XmlDatabaseDAOTest {
 		newDatabase.addDatabaseVersion(newDatabaseVersion);
 		
 		// Write database to disk, read it again, and compare them
-		Database loadedDatabase = writeReadAndCompareDatabase(newDatabase);
+		MemDatabase loadedDatabase = writeReadAndCompareDatabase(newDatabase);
 		
 		// Check chunks
 		assertEquals("Chunk not found in database loaded.", chunkA1, loadedDatabase.getChunk(chunkA1.getChecksum()));
@@ -100,15 +100,15 @@ public class XmlDatabaseDAOTest {
 		assertEquals("Chunk not found in database loaded.", chunkA4, loadedDatabase.getChunk(chunkA4.getChecksum()));
 	}
 		
-	private DatabaseVersion createDatabaseVersion() {
+	private MemDatabaseVersion createDatabaseVersion() {
 		return createDatabaseVersion(null);
 	}
 	
-	private DatabaseVersion createDatabaseVersion(DatabaseVersion basedOnDatabaseVersion) {
+	private MemDatabaseVersion createDatabaseVersion(MemDatabaseVersion basedOnDatabaseVersion) {
 		VectorClock vectorClock = (basedOnDatabaseVersion != null) ? basedOnDatabaseVersion.getVectorClock().clone() : new VectorClock();
 		vectorClock.incrementClock("someclient");
 		
-		DatabaseVersion databaseVersion = new DatabaseVersion();
+		MemDatabaseVersion databaseVersion = new MemDatabaseVersion();
 		
 		databaseVersion.setClient("someclient");
 		databaseVersion.setTimestamp(new Date());
@@ -120,17 +120,17 @@ public class XmlDatabaseDAOTest {
 	@Test
 	public void testWriteAndReadChunksWithMultiChunks() throws IOException {
 		// Prepare
-		Database newDatabase = new Database();
-		DatabaseVersion newDatabaseVersion = createDatabaseVersion();
+		MemDatabase newDatabase = new MemDatabase();
+		MemDatabaseVersion newDatabaseVersion = createDatabaseVersion();
 		
 		// Create chunks
-        ChunkEntry chunkA1 = new ChunkEntry(new byte[] { 1,2,3,4,5,7,8,9,0}, 12);
-        ChunkEntry chunkA2 = new ChunkEntry(new byte[] { 9,8,7,6,5,4,3,2,1}, 34);
-        ChunkEntry chunkA3 = new ChunkEntry(new byte[] { 1,1,1,1,1,1,1,1,1}, 56);
-        ChunkEntry chunkA4 = new ChunkEntry(new byte[] { 2,2,2,2,2,2,2,2,2}, 78);
+        MemChunkEntry chunkA1 = new MemChunkEntry(new byte[] { 1,2,3,4,5,7,8,9,0}, 12);
+        MemChunkEntry chunkA2 = new MemChunkEntry(new byte[] { 9,8,7,6,5,4,3,2,1}, 34);
+        MemChunkEntry chunkA3 = new MemChunkEntry(new byte[] { 1,1,1,1,1,1,1,1,1}, 56);
+        MemChunkEntry chunkA4 = new MemChunkEntry(new byte[] { 2,2,2,2,2,2,2,2,2}, 78);
 
-        ChunkEntry chunkB1 = new ChunkEntry(new byte[] { 3,3,3,3,3,3,3,3,3}, 910);
-        ChunkEntry chunkB2 = new ChunkEntry(new byte[] { 4,4,4,4,4,4,4,4,4}, 1112);
+        MemChunkEntry chunkB1 = new MemChunkEntry(new byte[] { 3,3,3,3,3,3,3,3,3}, 910);
+        MemChunkEntry chunkB2 = new MemChunkEntry(new byte[] { 4,4,4,4,4,4,4,4,4}, 1112);
         
         newDatabaseVersion.addChunk(chunkA1);
         newDatabaseVersion.addChunk(chunkA2);
@@ -140,13 +140,13 @@ public class XmlDatabaseDAOTest {
         newDatabaseVersion.addChunk(chunkB2);        
         
         // Distribute chunks to multichunks
-        MultiChunkEntry multiChunkA = new MultiChunkEntry(new byte[] {6,6,6,6,6,6,6,6,6});
+        MemMultiChunkEntry multiChunkA = new MemMultiChunkEntry(new byte[] {6,6,6,6,6,6,6,6,6});
         multiChunkA.addChunk(new ChunkEntryId(chunkA1.getChecksum())); 
         multiChunkA.addChunk(new ChunkEntryId(chunkA2.getChecksum())); 
         multiChunkA.addChunk(new ChunkEntryId(chunkA3.getChecksum()));
         newDatabaseVersion.addMultiChunk(multiChunkA);
         
-        MultiChunkEntry multiChunkB = new MultiChunkEntry(new byte[] {7,7,7,7,7,7,7,7,7});
+        MemMultiChunkEntry multiChunkB = new MemMultiChunkEntry(new byte[] {7,7,7,7,7,7,7,7,7});
         multiChunkB.addChunk(new ChunkEntryId(chunkA4.getChecksum()));
         multiChunkB.addChunk(new ChunkEntryId(chunkB1.getChecksum()));
         multiChunkB.addChunk(new ChunkEntryId(chunkB2.getChecksum()));
@@ -156,7 +156,7 @@ public class XmlDatabaseDAOTest {
 		newDatabase.addDatabaseVersion(newDatabaseVersion);
 		
 		// Write database to disk, read it again, and compare them
-		Database loadedDatabase = writeReadAndCompareDatabase(newDatabase);
+		MemDatabase loadedDatabase = writeReadAndCompareDatabase(newDatabase);
 		
 		// Check chunks
 		assertEquals("Chunk not found in database loaded.", chunkA1, loadedDatabase.getChunk(chunkA1.getChecksum()));
@@ -168,8 +168,8 @@ public class XmlDatabaseDAOTest {
 		assertEquals("Chunk not found in database loaded.", chunkB2, loadedDatabase.getChunk(chunkB2.getChecksum()));
 
 		// Check multichunks
-		IMultiChunkEntry loadedMultiChunkA = loadedDatabase.getMultiChunk(multiChunkA.getId());
-		IMultiChunkEntry loadedMultiChunkB = loadedDatabase.getMultiChunk(multiChunkB.getId());
+		MultiChunkEntry loadedMultiChunkA = loadedDatabase.getMultiChunk(multiChunkA.getId());
+		MultiChunkEntry loadedMultiChunkB = loadedDatabase.getMultiChunk(multiChunkB.getId());
 		
 		assertEquals("Multichunk not found in database loaded.", multiChunkA, loadedMultiChunkA);
 		assertEquals("Multichunk not found in database loaded.", multiChunkB, loadedMultiChunkB);
@@ -181,17 +181,17 @@ public class XmlDatabaseDAOTest {
 	@Test
 	public void testWriteAndReadChunksWithFileContents() throws IOException {
 		// Prepare
-		Database newDatabase = new Database();
-		DatabaseVersion newDatabaseVersion = createDatabaseVersion();
+		MemDatabase newDatabase = new MemDatabase();
+		MemDatabaseVersion newDatabaseVersion = createDatabaseVersion();
 		
 		// Create chunks
-        ChunkEntry chunkA1 = new ChunkEntry(new byte[] { 1,2,3,4,5,7,8,9,0}, 12);
-        ChunkEntry chunkA2 = new ChunkEntry(new byte[] { 9,8,7,6,5,4,3,2,1}, 34);
-        ChunkEntry chunkA3 = new ChunkEntry(new byte[] { 1,1,1,1,1,1,1,1,1}, 56);
-        ChunkEntry chunkA4 = new ChunkEntry(new byte[] { 2,2,2,2,2,2,2,2,2}, 78);
+        MemChunkEntry chunkA1 = new MemChunkEntry(new byte[] { 1,2,3,4,5,7,8,9,0}, 12);
+        MemChunkEntry chunkA2 = new MemChunkEntry(new byte[] { 9,8,7,6,5,4,3,2,1}, 34);
+        MemChunkEntry chunkA3 = new MemChunkEntry(new byte[] { 1,1,1,1,1,1,1,1,1}, 56);
+        MemChunkEntry chunkA4 = new MemChunkEntry(new byte[] { 2,2,2,2,2,2,2,2,2}, 78);
 
-        ChunkEntry chunkB1 = new ChunkEntry(new byte[] { 3,3,3,3,3,3,3,3,3}, 910);
-        ChunkEntry chunkB2 = new ChunkEntry(new byte[] { 4,4,4,4,4,4,4,4,4}, 1112);
+        MemChunkEntry chunkB1 = new MemChunkEntry(new byte[] { 3,3,3,3,3,3,3,3,3}, 910);
+        MemChunkEntry chunkB2 = new MemChunkEntry(new byte[] { 4,4,4,4,4,4,4,4,4}, 1112);
         
         newDatabaseVersion.addChunk(chunkA1);
         newDatabaseVersion.addChunk(chunkA2);
@@ -201,7 +201,7 @@ public class XmlDatabaseDAOTest {
         newDatabaseVersion.addChunk(chunkB2);        
         
         // Distribute chunks to file contents    	
-        FileContent contentA = new FileContent();        
+        MemFileContent contentA = new MemFileContent();        
         contentA.addChunk(new ChunkEntryId(chunkA1.getChecksum()));
         contentA.addChunk(new ChunkEntryId(chunkA2.getChecksum()));
         contentA.addChunk(new ChunkEntryId(chunkA3.getChecksum()));
@@ -209,7 +209,7 @@ public class XmlDatabaseDAOTest {
         contentA.setChecksum(new byte[]{5,5,5,4,4,5,5,5,5});              
         newDatabaseVersion.addFileContent(contentA);
                 
-        FileContent contentB = new FileContent();
+        MemFileContent contentB = new MemFileContent();
         contentB.addChunk(new ChunkEntryId(chunkB1.getChecksum()));
         contentB.addChunk(new ChunkEntryId(chunkB2.getChecksum())); 
         contentB.setChecksum(new byte[]{1,1,1,3,3,5,5,5,5});                      
@@ -219,7 +219,7 @@ public class XmlDatabaseDAOTest {
 		newDatabase.addDatabaseVersion(newDatabaseVersion);
 		
 		// Write database to disk, read it again, and compare them
-		Database loadedDatabase = writeReadAndCompareDatabase(newDatabase);
+		MemDatabase loadedDatabase = writeReadAndCompareDatabase(newDatabase);
 		
 		// Check chunks
 		assertEquals("Chunk not found in database loaded.", chunkA1, loadedDatabase.getChunk(chunkA1.getChecksum()));
@@ -231,8 +231,8 @@ public class XmlDatabaseDAOTest {
 		assertEquals("Chunk not found in database loaded.", chunkB2, loadedDatabase.getChunk(chunkB2.getChecksum()));
 		
 		// Check file contents
-		IFileContent loadedContentA = loadedDatabase.getContent(contentA.getChecksum());
-		IFileContent loadedContentB = loadedDatabase.getContent(contentB.getChecksum());
+		FileContent loadedContentA = loadedDatabase.getContent(contentA.getChecksum());
+		FileContent loadedContentB = loadedDatabase.getContent(contentB.getChecksum());
 		
 		assertEquals("File content not found in database loaded.", contentA, loadedContentA);
 		assertEquals("File content not found in database loaded.", contentB, loadedContentB	);
@@ -244,16 +244,16 @@ public class XmlDatabaseDAOTest {
 	@Test
 	public void testWriteAndReadFileHistoryAndFileVersion() throws IOException {
 		// Prepare
-		Database newDatabase = new Database();
-		DatabaseVersion newDatabaseVersion = createDatabaseVersion();
+		MemDatabase newDatabase = new MemDatabase();
+		MemDatabaseVersion newDatabaseVersion = createDatabaseVersion();
 	
 		// Create directories (no content!)
 
 		// File A
-		PartialFileHistory fileHistoryA = new PartialFileHistory(1L);
+		MemPartialFileHistory fileHistoryA = new MemPartialFileHistory(1L);
 		newDatabaseVersion.addFileHistory(fileHistoryA);
 		
-        FileVersion versionA1 = new FileVersion();
+        MemFileVersion versionA1 = new MemFileVersion();
         versionA1.setVersion(1L);
         versionA1.setType(FileType.FOLDER);
         versionA1.setPath("Pictures/2013/New York Folder");
@@ -262,7 +262,7 @@ public class XmlDatabaseDAOTest {
         versionA1.setLastModified(new Date());
         newDatabaseVersion.addFileVersionToHistory(fileHistoryA.getFileId(), versionA1);
         
-        FileVersion versionA2 = new FileVersion();
+        MemFileVersion versionA2 = new MemFileVersion();
         versionA2.setVersion(2L);
         versionA2.setType(FileType.FOLDER);
         versionA2.setPath("Pictures/2013/New York");  
@@ -272,10 +272,10 @@ public class XmlDatabaseDAOTest {
         newDatabaseVersion.addFileVersionToHistory(fileHistoryA.getFileId(), versionA2);	
 		       
         // File B
-		PartialFileHistory fileHistoryB = new PartialFileHistory(2L);
+		MemPartialFileHistory fileHistoryB = new MemPartialFileHistory(2L);
 		newDatabaseVersion.addFileHistory(fileHistoryB);
 		
-        FileVersion versionB1 = new FileVersion();
+        MemFileVersion versionB1 = new MemFileVersion();
         versionB1.setVersion(1L);
         versionB1.setType(FileType.FOLDER);
         versionB1.setPath("Pictures/2013/Egypt Folder");
@@ -284,7 +284,7 @@ public class XmlDatabaseDAOTest {
         versionB1.setLastModified(new Date());
         newDatabaseVersion.addFileVersionToHistory(fileHistoryB.getFileId(), versionB1);
         
-        FileVersion versionB2 = new FileVersion();
+        MemFileVersion versionB2 = new MemFileVersion();
         versionB2.setVersion(2L);
         versionB2.setType(FileType.FOLDER);
         versionB2.setPath("Pictures/2013/Egypt");        
@@ -297,11 +297,11 @@ public class XmlDatabaseDAOTest {
 		newDatabase.addDatabaseVersion(newDatabaseVersion);
 		
 		// Write database to disk, read it again, and compare them
-		Database loadedDatabase = writeReadAndCompareDatabase(newDatabase);
+		MemDatabase loadedDatabase = writeReadAndCompareDatabase(newDatabase);
 		 
 		// File histories
-		IPartialFileHistory loadedFileHistoryA = loadedDatabase.getFileHistory(fileHistoryA.getFileId());
-		IPartialFileHistory loadedFileHistoryB = loadedDatabase.getFileHistory(fileHistoryB.getFileId());
+		PartialFileHistory loadedFileHistoryA = loadedDatabase.getFileHistory(fileHistoryA.getFileId());
+		PartialFileHistory loadedFileHistoryB = loadedDatabase.getFileHistory(fileHistoryB.getFileId());
 		
 		assertEquals("File history not found in database loaded.", fileHistoryA, loadedFileHistoryA);
 		assertEquals("File history not found in database loaded.", fileHistoryB, loadedFileHistoryB);
@@ -316,8 +316,8 @@ public class XmlDatabaseDAOTest {
 	@Test
 	public void testWriteAndReadVectorClock() throws IOException {
 		// Prepare
-		Database newDatabase = new Database();
-		DatabaseVersion newDatabaseVersion = createDatabaseVersion();
+		MemDatabase newDatabase = new MemDatabase();
+		MemDatabaseVersion newDatabaseVersion = createDatabaseVersion();
 
 		// Create new vector clock
 		VectorClock vc = new VectorClock();
@@ -332,11 +332,11 @@ public class XmlDatabaseDAOTest {
 		newDatabase.addDatabaseVersion(newDatabaseVersion);
 		
 		// Write database to disk, read it again, and compare them
-		Database loadedDatabase = writeReadAndCompareDatabase(newDatabase);
+		MemDatabase loadedDatabase = writeReadAndCompareDatabase(newDatabase);
 		
 		// Check VC
-		IDatabaseVersion loadedDatabaseVersionSelectedByVectorClock = loadedDatabase.getDatabaseVersion(vc);
-		IDatabaseVersion loadedDatabaseVersionSelectedFirst = loadedDatabase.getDatabaseVersions().get(0);
+		DatabaseVersion loadedDatabaseVersionSelectedByVectorClock = loadedDatabase.getDatabaseVersion(vc);
+		DatabaseVersion loadedDatabaseVersionSelectedFirst = loadedDatabase.getDatabaseVersions().get(0);
 				
 		assertEquals("Vector clocks do not match (selected by vector clock)", vc, loadedDatabaseVersionSelectedByVectorClock.getVectorClock());
 		assertEquals("Vector clocks do not match (selected first)", vc, loadedDatabaseVersionSelectedFirst.getVectorClock());
@@ -345,17 +345,17 @@ public class XmlDatabaseDAOTest {
 		
 	@Test
 	public void testWriteAndReadMultipleDatabaseVersions() throws IOException {
-		Database writtenDatabase = new Database();
-		List<DatabaseVersion> writtenDatabaseVersions = new ArrayList<DatabaseVersion>();
+		MemDatabase writtenDatabase = new MemDatabase();
+		List<MemDatabaseVersion> writtenDatabaseVersions = new ArrayList<MemDatabaseVersion>();
 		
 		for (int i=0; i<10; i++) {
-			DatabaseVersion basedOnDatabaseVersion = (i > 0) ? writtenDatabaseVersions.get(i-1) : null; 
-			DatabaseVersion newDatabaseVersion = createDatabaseVersion(basedOnDatabaseVersion);
+			MemDatabaseVersion basedOnDatabaseVersion = (i > 0) ? writtenDatabaseVersions.get(i-1) : null; 
+			MemDatabaseVersion newDatabaseVersion = createDatabaseVersion(basedOnDatabaseVersion);
 			
 			// Some random chunks
-			newDatabaseVersion.addChunk(new ChunkEntry(TestFileUtil.createRandomArray(20), 32*1024));
-			newDatabaseVersion.addChunk(new ChunkEntry(TestFileUtil.createRandomArray(20), 32*1024));
-			newDatabaseVersion.addChunk(new ChunkEntry(TestFileUtil.createRandomArray(20), 32*1024));
+			newDatabaseVersion.addChunk(new MemChunkEntry(TestFileUtil.createRandomArray(20), 32*1024));
+			newDatabaseVersion.addChunk(new MemChunkEntry(TestFileUtil.createRandomArray(20), 32*1024));
+			newDatabaseVersion.addChunk(new MemChunkEntry(TestFileUtil.createRandomArray(20), 32*1024));
 			
 			// Add to database
 			writtenDatabase.addDatabaseVersion(newDatabaseVersion);
@@ -370,17 +370,17 @@ public class XmlDatabaseDAOTest {
 	
 	@Test
 	public void testWritePartialDatabaseOneToFive() throws IOException {
-		Database writtenDatabase = new Database();
-		List<DatabaseVersion> writtenDatabaseVersions = new ArrayList<DatabaseVersion>();
+		MemDatabase writtenDatabase = new MemDatabase();
+		List<MemDatabaseVersion> writtenDatabaseVersions = new ArrayList<MemDatabaseVersion>();
 		
 		for (int i=0; i<10; i++) {
-			DatabaseVersion basedOnDatabaseVersion = (i > 0) ? writtenDatabaseVersions.get(i-1) : null; 
-			DatabaseVersion newDatabaseVersion = createDatabaseVersion(basedOnDatabaseVersion);
+			MemDatabaseVersion basedOnDatabaseVersion = (i > 0) ? writtenDatabaseVersions.get(i-1) : null; 
+			MemDatabaseVersion newDatabaseVersion = createDatabaseVersion(basedOnDatabaseVersion);
 			
 			// Some random chunks
-			newDatabaseVersion.addChunk(new ChunkEntry(TestFileUtil.createRandomArray(20), 32*1024));
-			newDatabaseVersion.addChunk(new ChunkEntry(TestFileUtil.createRandomArray(20), 32*1024));
-			newDatabaseVersion.addChunk(new ChunkEntry(TestFileUtil.createRandomArray(20), 32*1024));
+			newDatabaseVersion.addChunk(new MemChunkEntry(TestFileUtil.createRandomArray(20), 32*1024));
+			newDatabaseVersion.addChunk(new MemChunkEntry(TestFileUtil.createRandomArray(20), 32*1024));
+			newDatabaseVersion.addChunk(new MemChunkEntry(TestFileUtil.createRandomArray(20), 32*1024));
 			
 			// Add to database
 			writtenDatabase.addDatabaseVersion(newDatabaseVersion);
@@ -396,14 +396,14 @@ public class XmlDatabaseDAOTest {
 		writeDAO.save(writtenDatabase, writtenDatabaseVersions.get(0), writtenDatabaseVersions.get(4), writtenDatabaseFile);
 		
 		// Read again
-		Database readDatabase = new Database();
+		MemDatabase readDatabase = new MemDatabase();
 		
 		XmlDatabaseDAO readDAO = new XmlDatabaseDAO();
 		readDAO.load(readDatabase, writtenDatabaseFile);
 		
 		for (int i=0; i<=4; i++) {
-			DatabaseVersion writtenDatabaseVersion = writtenDatabaseVersions.get(i);
-			IDatabaseVersion readDatabaseVersion = readDatabase.getDatabaseVersion(writtenDatabaseVersion.getVectorClock());
+			MemDatabaseVersion writtenDatabaseVersion = writtenDatabaseVersions.get(i);
+			DatabaseVersion readDatabaseVersion = readDatabase.getDatabaseVersion(writtenDatabaseVersion.getVectorClock());
 			
 			assertNotNull(readDatabaseVersion);
 			assertDatabaseVersionEquals(writtenDatabaseVersion, readDatabaseVersion);
@@ -412,10 +412,10 @@ public class XmlDatabaseDAOTest {
 		assertEquals(5, readDatabase.getDatabaseVersions().size());
 	}	
 	
-	private Database writeReadAndCompareDatabase(Database writtenDatabase) throws IOException {
+	private MemDatabase writeReadAndCompareDatabase(MemDatabase writtenDatabase) throws IOException {
 		File writtenDatabaseFile = new File(tempDir+"/db-"+Math.random()+"-" + Math.abs(new Random().nextInt(Integer.MAX_VALUE)));
 		TestDatabaseUtil.writeDatabaseFileToDisk(writtenDatabase, writtenDatabaseFile, null);
-		Database readDatabase = TestDatabaseUtil.readDatabaseFileFromDisk(writtenDatabaseFile, null);
+		MemDatabase readDatabase = TestDatabaseUtil.readDatabaseFileFromDisk(writtenDatabaseFile, null);
 		
 		TestAssertUtil.assertDatabaseEquals(writtenDatabase, readDatabase);
 		

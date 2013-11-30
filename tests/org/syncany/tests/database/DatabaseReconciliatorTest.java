@@ -26,7 +26,7 @@ import org.junit.Test;
 import org.syncany.database.Branch;
 import org.syncany.database.Branches;
 import org.syncany.database.DatabaseVersionHeader;
-import org.syncany.database.persistence.IDatabaseVersionHeader;
+import org.syncany.database.mem.MemDatabaseVersionHeader;
 import org.syncany.operations.DatabaseReconciliator;
 import org.syncany.tests.util.TestDatabaseUtil;
 
@@ -38,7 +38,7 @@ public class DatabaseReconciliatorTest {
 		
 		/// Input data ///
 		String localMachineName = "B";
-		DatabaseVersionHeader currentLocalVersion = null;
+		MemDatabaseVersionHeader currentLocalVersion = null;
 		Branches allBranches = new Branches();
 		 
 		// A
@@ -90,7 +90,7 @@ public class DatabaseReconciliatorTest {
 		/// Input data ///
 		String localMachineName = "A";
 
-		DatabaseVersionHeader currentLocalVersion = null;
+		MemDatabaseVersionHeader currentLocalVersion = null;
 		Branches allBranches = new Branches();
 		
 		// A
@@ -136,7 +136,7 @@ public class DatabaseReconciliatorTest {
 		/// Input data ///
 		String localMachineName = "C";
 
-		DatabaseVersionHeader currentLocalVersion = null;
+		MemDatabaseVersionHeader currentLocalVersion = null;
 		Branches allBranches = new Branches();
 		
 		// A
@@ -188,7 +188,7 @@ public class DatabaseReconciliatorTest {
 		/// Input data ///
 		String localMachineName = "B";
 
-		DatabaseVersionHeader currentLocalVersion = null;
+		MemDatabaseVersionHeader currentLocalVersion = null;
 		Branches allBranches = new Branches();
 		
 		// A
@@ -249,7 +249,7 @@ public class DatabaseReconciliatorTest {
 		/// Input data ///
 		String localMachineName = "A";
 
-		DatabaseVersionHeader currentLocalVersion = null;
+		MemDatabaseVersionHeader currentLocalVersion = null;
 		Branches allBranches = new Branches();
 		
 		// A
@@ -310,7 +310,7 @@ public class DatabaseReconciliatorTest {
 		/// Input data ///
 		String localMachineName = "C";
 
-		DatabaseVersionHeader currentLocalVersion = null;
+		MemDatabaseVersionHeader currentLocalVersion = null;
 		Branches allBranches = new Branches();
 		
 		// A
@@ -371,7 +371,7 @@ public class DatabaseReconciliatorTest {
 		/// Input data ///
 		String localMachineName = "C";
 		
-		DatabaseVersionHeader currentLocalVersion = null;
+		MemDatabaseVersionHeader currentLocalVersion = null;
 
 		Branches allBranches = new Branches();
 		
@@ -438,7 +438,7 @@ public class DatabaseReconciliatorTest {
 		
 		/// Input data ///
 		String localMachineName = "B";
-		DatabaseVersionHeader currentLocalVersion = TestDatabaseUtil.createFromString("A/(A1,C4)/T=8");
+		MemDatabaseVersionHeader currentLocalVersion = TestDatabaseUtil.createFromString("A/(A1,C4)/T=8");
 		Branches allBranches = new Branches();
 		
 		// A
@@ -494,7 +494,7 @@ public class DatabaseReconciliatorTest {
 		
 		/// Input data ///
 		String localMachineName = "D";
-		DatabaseVersionHeader currentLocalVersion = TestDatabaseUtil.createFromString("A/(A1,C4)/T=8");
+		MemDatabaseVersionHeader currentLocalVersion = TestDatabaseUtil.createFromString("A/(A1,C4)/T=8");
 		Branches allBranches = new Branches();
 		
 		// A
@@ -561,7 +561,7 @@ public class DatabaseReconciliatorTest {
 		
 		/// Input data ///
 		String localMachineName = "C";
-		DatabaseVersionHeader currentLocalVersion = TestDatabaseUtil.createFromString("A/(A1)/T=1376074225169");
+		MemDatabaseVersionHeader currentLocalVersion = TestDatabaseUtil.createFromString("A/(A1)/T=1376074225169");
 		Branches allBranches = new Branches();
 
 		allBranches.put("A", TestDatabaseUtil.createBranch(new String[] {
@@ -599,7 +599,7 @@ public class DatabaseReconciliatorTest {
 		
 		/// Input data ///
 		String localMachineName = "C";
-		DatabaseVersionHeader currentLocalVersion = TestDatabaseUtil.createFromString("A/(A2)/T=1376074225230");
+		MemDatabaseVersionHeader currentLocalVersion = TestDatabaseUtil.createFromString("A/(A2)/T=1376074225230");
 		Branches allBranches = new Branches();
 
 		allBranches.put("A", TestDatabaseUtil.createBranch(new String[] {
@@ -759,7 +759,7 @@ public class DatabaseReconciliatorTest {
 		assertEquals("Stitched branches not equal.", expectedStitchedBranches.toString(), actualStitchedRemoteBranches.toString());
 	}		
 
-	private void testFromMachinePerspective(String localMachineName, DatabaseVersionHeader currentLocalVersion, Branches allBranches, TestResult expectedTestResult) throws Exception {
+	private void testFromMachinePerspective(String localMachineName, MemDatabaseVersionHeader currentLocalVersion, Branches allBranches, TestResult expectedTestResult) throws Exception {
 		// Print them all
 		System.out.println("testFromMachinePerspective('"+localMachineName+"') with database version headers:");
 		
@@ -819,7 +819,7 @@ public class DatabaseReconciliatorTest {
 	}
 	
 	private void printBranch(Branch branch) {
-		for (IDatabaseVersionHeader databaseVersionHeader : branch.getAll()) {
+		for (DatabaseVersionHeader databaseVersionHeader : branch.getAll()) {
 			System.out.println("- "+databaseVersionHeader);
 		}
 	}
@@ -831,9 +831,9 @@ public class DatabaseReconciliatorTest {
 	}		
 	
 	private class TestResult {
-		IDatabaseVersionHeader lastCommonHeader;		
-		TreeMap<String, IDatabaseVersionHeader> firstConflictingDatabaseVersionHeaders;
-		TreeMap<String, IDatabaseVersionHeader> winningFirstConflictingDatabaseVersionHeaders;
-		Map.Entry<String, IDatabaseVersionHeader> winnersWinnersLastDatabaseVersionHeader;	
+		DatabaseVersionHeader lastCommonHeader;		
+		TreeMap<String, DatabaseVersionHeader> firstConflictingDatabaseVersionHeaders;
+		TreeMap<String, DatabaseVersionHeader> winningFirstConflictingDatabaseVersionHeaders;
+		Map.Entry<String, DatabaseVersionHeader> winnersWinnersLastDatabaseVersionHeader;	
 	}
 }

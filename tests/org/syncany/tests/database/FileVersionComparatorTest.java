@@ -34,13 +34,13 @@ import java.util.Date;
 
 import org.junit.Test;
 import org.syncany.config.Config;
-import org.syncany.database.FileVersion;
 import org.syncany.database.FileVersionComparator;
 import org.syncany.database.FileVersionComparator.FileChange;
 import org.syncany.database.FileVersionComparator.FileProperties;
 import org.syncany.database.FileVersionComparator.FileVersionComparison;
-import org.syncany.database.persistence.IFileVersion.FileStatus;
-import org.syncany.database.persistence.IFileVersion.FileType;
+import org.syncany.database.FileVersion.FileStatus;
+import org.syncany.database.FileVersion.FileType;
+import org.syncany.database.mem.MemFileVersion;
 import org.syncany.tests.util.TestConfigUtil;
 import org.syncany.tests.util.TestFileUtil;
 import org.syncany.util.CollectionUtil;
@@ -107,7 +107,7 @@ public class FileVersionComparatorTest {
 		Config config = TestConfigUtil.createTestLocalConfig();
 		FileVersionComparator versionComparator = new FileVersionComparator(config.getLocalDir(), config.getChunker().getChecksumAlgorithm());
 		
-		FileVersion fileVersion = new FileVersion();
+		MemFileVersion fileVersion = new MemFileVersion();
 		fileVersion.setVersion(3L);
 
 		fileVersion.setChecksum(new byte[] { 0x11, 0x22, 0x33 });
@@ -181,7 +181,7 @@ public class FileVersionComparatorTest {
 		}
 		
 		// Create FileVersion
-		FileVersion fileVersion = new FileVersion();
+		MemFileVersion fileVersion = new MemFileVersion();
 		fileVersion.setVersion(100L);
 
 		fileVersion.setChecksum(new byte[] { 0x11, 0x22, 0x33 }); // << definitely differs

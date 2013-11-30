@@ -2,25 +2,27 @@ package org.syncany.database.util;
 
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
+import org.hibernate.service.ServiceRegistry;
+import org.hibernate.service.ServiceRegistryBuilder;
 
 public class PersistenceUtil {
+	private static ServiceRegistry serviceRegistry;
 	private static SessionFactory sessionFactory;
-	private static Configuration config;
 	
 	static {
 		try {
-			config = new Configuration();
+			Configuration configuration = new Configuration().configure();
 
-		} catch (Throwable ex) {
+            serviceRegistry = new ServiceRegistryBuilder().applySettings(configuration.getProperties()).buildServiceRegistry();
+            sessionFactory = configuration.buildSessionFactory(serviceRegistry);
+		}
+		catch (Exception ex) {
 			System.err.println("Initial SessionFactory creation failed." + ex);
 			throw new ExceptionInInitializerError(ex);
 		}
 	}
 
-	public static SessionFactory getSessionFactory() {
-		if(sessionFactory == null || sessionFactory.isClosed()) {
-			sessionFactory = config.configure().buildSessionFactory();
-		}
+	public static SessionFactory getSessionFactory() {		
 		return sessionFactory;
 	}
 

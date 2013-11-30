@@ -18,14 +18,14 @@
 package org.syncany.operations.actions;
 
 import org.syncany.config.Config;
-import org.syncany.database.Database;
+import org.syncany.database.FileVersion;
 import org.syncany.database.FileVersionComparator.FileChange;
 import org.syncany.database.FileVersionComparator.FileVersionComparison;
-import org.syncany.database.persistence.IFileVersion;
+import org.syncany.database.mem.MemDatabase;
 import org.syncany.util.CollectionUtil;
 
 public class NewSymlinkFileSystemAction extends FileSystemAction {
-	public NewSymlinkFileSystemAction(Config config, IFileVersion newFileVersion, Database localDatabase, Database winningDatabase) {
+	public NewSymlinkFileSystemAction(Config config, FileVersion newFileVersion, MemDatabase localDatabase, MemDatabase winningDatabase) {
 		super(config, localDatabase, winningDatabase, null, newFileVersion);
 	}
 	

@@ -19,182 +19,54 @@ package org.syncany.database;
 
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import org.syncany.database.ChunkEntry.ChunkEntryId;
-import org.syncany.database.persistence.IChunkEntry;
-import org.syncany.database.persistence.IDatabaseVersion;
-import org.syncany.database.persistence.IFileContent;
-import org.syncany.database.persistence.IFileVersion;
-import org.syncany.database.persistence.IMultiChunkEntry;
-import org.syncany.database.persistence.IPartialFileHistory;
-import org.syncany.util.ByteArray;
+import org.syncany.database.mem.MemChunkEntry.ChunkEntryId;
 
-public class DatabaseVersion implements IDatabaseVersion {
-    private DatabaseVersionHeader header; 
-    
-    // Full DB in RAM
-    private Map<ByteArray, IChunkEntry> chunks;
-    private Map<ByteArray, IMultiChunkEntry> multiChunks;
-    private Map<ByteArray, IFileContent> fileContents;
-    private Map<Long, IPartialFileHistory> fileHistories;
+public interface DatabaseVersion {
+  
+	public DatabaseVersionHeader getHeader();
 
-    // Quick access cache
-    private Map<ChunkEntryId, IMultiChunkEntry> chunkMultiChunkCache;    
+	public Date getTimestamp();
 
-    public DatabaseVersion() {
-    	header = new DatabaseVersionHeader();
-
-        // Full DB in RAM
-        chunks = new HashMap<ByteArray, IChunkEntry>();
-        multiChunks = new HashMap<ByteArray, IMultiChunkEntry>();
-        fileContents = new HashMap<ByteArray, IFileContent>();
-        fileHistories = new HashMap<Long, IPartialFileHistory>();          
-
-        // Quick access cache
-        chunkMultiChunkCache = new HashMap<ChunkEntryId, IMultiChunkEntry>();
-    }
-    
-	public DatabaseVersionHeader getHeader() {
-		return header;
-	}
-
-	public Date getTimestamp() {
-		return header.getDate();
-	}
-
-	public void setTimestamp(Date timestamp) {
-		this.header.setDate(timestamp);
-	}    
+	public void setTimestamp(Date timestamp);
 	
-	public VectorClock getVectorClock() {
-		return header.getVectorClock();
-	}
+	public VectorClock getVectorClock();
 
-	public void setVectorClock(VectorClock vectorClock) {
-		this.header.setVectorClock(vectorClock);
-	}
+	public void setVectorClock(VectorClock vectorClock);
 	
-	public void setClient(String client) {
-		this.header.setClient(client);
-	}
-	
-	public String getClient() {
-		return header.getClient();
-	}
+	public void setClient(String client);
+		
+	public String getClient();
 
-    // Chunk
+    public ChunkEntry getChunk(byte[] checksum);
     
-    public IChunkEntry getChunk(byte[] checksum) {
-        return chunks.get(new ByteArray(checksum));
-    }    
+    public void addChunk(ChunkEntry chunk);
+
+    public void addChunks(List<ChunkEntry> chunks);
+
+    public Collection<ChunkEntry> getChunks();
+
+    public void addMultiChunk(MultiChunkEntry multiChunk);
     
-    public void addChunk(IChunkEntry chunk) {
-        chunks.put(new ByteArray(chunk.getChecksum()), chunk);        
-    }
+    public MultiChunkEntry getMultiChunk(byte[] multiChunkId);
     
-	public void addChunks(List<IChunkEntry> chunks) {
-		for (IChunkEntry chunk : chunks) {
-			addChunk(chunk);	
-		}
-	}    
+    public MultiChunkEntry getMultiChunk(ChunkEntryId chunk);
     
-    public Collection<IChunkEntry> getChunks() {
-        return chunks.values();
-    }
+    public Collection<MultiChunkEntry> getMultiChunks();
     
-    // Multichunk    
+	public FileContent getFileContent(byte[] checksum);
+
+	public void addFileContent(FileContent content);
+
+	public Collection<FileContent> getFileContents();
+	
+    public void addFileHistory(PartialFileHistory history);
     
-    public void addMultiChunk(IMultiChunkEntry multiChunk) {
-        multiChunks.put(new ByteArray(multiChunk.getId()), multiChunk);
+    public PartialFileHistory getFileHistory(long fileId);
         
-        // Populate cache
-        for (ChunkEntryId chunkChecksum : multiChunk.getChunks()) {
-        	chunkMultiChunkCache.put(chunkChecksum, multiChunk);
-        }
-    }
+    public Collection<PartialFileHistory> getFileHistories();
     
-    public IMultiChunkEntry getMultiChunk(byte[] multiChunkId) {
-    	return multiChunks.get(new ByteArray(multiChunkId));
-    }
-    
-    /**
-     * Get a multichunk that this chunk is contained in.
-     */
-    public IMultiChunkEntry getMultiChunk(ChunkEntryId chunk) {
-    	return chunkMultiChunkCache.get(chunk);
-    }
-    
-    /**
-     * Get all multichunks in this database version.
-     */
-    public Collection<IMultiChunkEntry> getMultiChunks() {
-        return multiChunks.values();
-    }
-	
-	// Content
-
-	public IFileContent getFileContent(byte[] checksum) {
-		return fileContents.get(new ByteArray(checksum));
-	}
-
-	public void addFileContent(IFileContent content) {
-		fileContents.put(new ByteArray(content.getChecksum()), content);
-	}
-
-	public Collection<IFileContent> getFileContents() {
-		return fileContents.values();
-	}
-	
-    // History
-    
-    public void addFileHistory(IPartialFileHistory history) {
-        fileHistories.put(history.getFileId(), history);
-    }
-    
-    public IPartialFileHistory getFileHistory(long fileId) {
-        return fileHistories.get(fileId);
-    }
-        
-    public Collection<IPartialFileHistory> getFileHistories() {
-        return fileHistories.values();
-    }  
-    
-    public void addFileVersionToHistory(long fileHistoryID, IFileVersion fileVersion) {
-    	fileHistories.get(fileHistoryID).addFileVersion(fileVersion);
-    }  
-    
-    @Override
-  	public int hashCode() {
-  		final int prime = 31;
-  		int result = 1;
-  		result = prime * result + ((header == null) ? 0 : header.hashCode());
-  		return result;
-  	}
-
-  	@Override
-  	public boolean equals(Object obj) {
-  		if (this == obj)
-  			return true;
-  		if (obj == null)
-  			return false;
-  		if (getClass() != obj.getClass())
-  			return false;
-  		DatabaseVersion other = (DatabaseVersion) obj;
-  		if (header == null) {
-  			if (other.header != null) 
-  				return false;
-  		} else if (!header.equals(other.header))
-  			return false;
-  		return true;
-  	}
-
-	@Override
-	public String toString() {
-		return "DatabaseVersion [header=" + header + ", chunks=" + chunks.size() + ", multiChunks=" + multiChunks.size() + ", fileContents=" + fileContents.size()
-				+ ", fileHistories=" + fileHistories.size() + "]";
-	}
-
+    public void addFileVersionToHistory(long fileHistoryID, FileVersion fileVersion);
+ 
 }

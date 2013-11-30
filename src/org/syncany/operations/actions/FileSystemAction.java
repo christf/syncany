@@ -33,12 +33,12 @@ import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
 import org.syncany.config.Config;
-import org.syncany.database.Database;
 import org.syncany.database.FileVersionComparator;
+import org.syncany.database.FileVersion;
 import org.syncany.database.FileVersionComparator.FileChange;
 import org.syncany.database.FileVersionComparator.FileVersionComparison;
-import org.syncany.database.persistence.IFileVersion;
-import org.syncany.database.persistence.IFileVersion.FileType;
+import org.syncany.database.FileVersion.FileType;
+import org.syncany.database.mem.MemDatabase;
 import org.syncany.util.CollectionUtil;
 import org.syncany.util.FileUtil;
 
@@ -46,13 +46,13 @@ public abstract class FileSystemAction {
 	protected static final Logger logger = Logger.getLogger(FileSystemAction.class.getSimpleName()); 
 	
 	protected Config config;
-	protected Database localDatabase;
-	protected Database winningDatabase;
-	protected IFileVersion fileVersion1;
-	protected IFileVersion fileVersion2;
+	protected MemDatabase localDatabase;
+	protected MemDatabase winningDatabase;
+	protected FileVersion fileVersion1;
+	protected FileVersion fileVersion2;
 	protected FileVersionComparator fileVersionHelper;
 	
-	public FileSystemAction(Config config, Database localDatabase, Database winningDatabase, IFileVersion file1, IFileVersion file2) {
+	public FileSystemAction(Config config, MemDatabase localDatabase, MemDatabase winningDatabase, FileVersion file1, FileVersion file2) {
 		this.config = config;
 		this.localDatabase = localDatabase;
 		this.winningDatabase = winningDatabase;
@@ -61,11 +61,11 @@ public abstract class FileSystemAction {
 		this.fileVersionHelper = new FileVersionComparator(config.getLocalDir(), config.getChunker().getChecksumAlgorithm());
 	}
 	
-	public IFileVersion getFile1() {
+	public FileVersion getFile1() {
 		return fileVersion1;
 	}
 
-	public IFileVersion getFile2() {
+	public FileVersion getFile2() {
 		return fileVersion2;
 	}
 	
@@ -78,7 +78,7 @@ public abstract class FileSystemAction {
 		}
 	}
 
-	protected void createSymlink(IFileVersion reconstructedFileVersion) throws Exception {
+	protected void createSymlink(FileVersion reconstructedFileVersion) throws Exception {
 		File reconstructedFileAtFinalLocation = getAbsolutePathFile(reconstructedFileVersion.getPath());
 
 		if (FileUtil.symlinksSupported()) {				
@@ -99,12 +99,12 @@ public abstract class FileSystemAction {
 		}
 	}
 	
-	protected void setLastModified(IFileVersion reconstructedFileVersion) {
+	protected void setLastModified(FileVersion reconstructedFileVersion) {
 		File reconstructedFilesAtFinalLocation = getAbsolutePathFile(reconstructedFileVersion.getPath());
 		reconstructedFilesAtFinalLocation.setLastModified(reconstructedFileVersion.getLastModified().getTime());			
 	}
 
-	protected void createConflictFile(IFileVersion conflictingLocalVersion) throws IOException {
+	protected void createConflictFile(FileVersion conflictingLocalVersion) throws IOException {
 		File conflictingLocalFile = getAbsolutePathFile(conflictingLocalVersion.getPath());
 		
 		if (!conflictingLocalFile.exists()) {
@@ -156,7 +156,7 @@ public abstract class FileSystemAction {
 		}
 	}
 	
-	protected void setFileAttributes(IFileVersion reconstructedFileVersion) throws IOException {
+	protected void setFileAttributes(FileVersion reconstructedFileVersion) throws IOException {
 		File reconstructedFilesAtFinalLocation = getAbsolutePathFile(reconstructedFileVersion.getPath());
 		
 		if (FileUtil.isWindows()) {
@@ -184,11 +184,11 @@ public abstract class FileSystemAction {
 		}		
 	}
 	
-	protected boolean fileAsExpected(IFileVersion expectedLocalFileVersion) {
+	protected boolean fileAsExpected(FileVersion expectedLocalFileVersion) {
 		return fileAsExpected(expectedLocalFileVersion, new FileChange[] { });
 	}	
 	
-	protected boolean fileAsExpected(IFileVersion expectedLocalFileVersion, FileChange... allowedFileChanges) {
+	protected boolean fileAsExpected(FileVersion expectedLocalFileVersion, FileChange... allowedFileChanges) {
 		FileVersionComparison fileVersionComparison = fileChanges(expectedLocalFileVersion);
 		
 		if (fileVersionComparison.equals()) {
@@ -202,19 +202,19 @@ public abstract class FileSystemAction {
 		}
 	}	
 	
-	protected FileVersionComparison fileChanges(IFileVersion expectedLocalFileVersion) {
+	protected FileVersionComparison fileChanges(FileVersion expectedLocalFileVersion) {
 		File actualLocalFile = getAbsolutePathFile(expectedLocalFileVersion.getPath());						
 		FileVersionComparison fileVersionComparison = fileVersionHelper.compare(expectedLocalFileVersion, actualLocalFile, true);
 		
 		return fileVersionComparison;
 	}
 	
-	protected boolean fileExists(IFileVersion expectedLocalFileVersion) {
+	protected boolean fileExists(FileVersion expectedLocalFileVersion) {
 		File actualLocalFile = getAbsolutePathFile(expectedLocalFileVersion.getPath());
 		return Files.exists(Paths.get(actualLocalFile.getAbsolutePath()), LinkOption.NOFOLLOW_LINKS);
 	}	
 	
-	protected void deleteFile(IFileVersion deleteFileVersion) {
+	protected void deleteFile(FileVersion deleteFileVersion) {
 		File fromFileOnDisk = getAbsolutePathFile(deleteFileVersion.getPath());
 		fromFileOnDisk.delete();		
 	}

@@ -38,17 +38,17 @@ import java.util.regex.Pattern;
 
 import org.junit.internal.ArrayComparisonFailure;
 import org.syncany.chunk.Transformer;
-import org.syncany.database.Database;
 import org.syncany.database.FileVersionComparator;
+import org.syncany.database.ChunkEntry;
+import org.syncany.database.DatabaseVersion;
+import org.syncany.database.FileContent;
+import org.syncany.database.MultiChunkEntry;
+import org.syncany.database.PartialFileHistory;
 import org.syncany.database.FileVersionComparator.FileChange;
 import org.syncany.database.FileVersionComparator.FileProperties;
 import org.syncany.database.FileVersionComparator.FileVersionComparison;
 import org.syncany.database.VectorClock;
-import org.syncany.database.persistence.IChunkEntry;
-import org.syncany.database.persistence.IDatabaseVersion;
-import org.syncany.database.persistence.IFileContent;
-import org.syncany.database.persistence.IMultiChunkEntry;
-import org.syncany.database.persistence.IPartialFileHistory;
+import org.syncany.database.mem.MemDatabase;
 import org.syncany.util.CollectionUtil;
 import org.syncany.util.FileUtil;
 import org.syncany.util.StringUtil;
@@ -163,26 +163,26 @@ public class TestAssertUtil {
 	}
 	
 	public static void assertDatabaseFileEquals(File expectedDatabaseFile, File actualDatabaseFile, Transformer transformer) throws IOException {		
-		Database expectedDatabase = TestDatabaseUtil.readDatabaseFileFromDisk(expectedDatabaseFile, transformer);
-		Database actualDatabase = TestDatabaseUtil.readDatabaseFileFromDisk(actualDatabaseFile, transformer);
+		MemDatabase expectedDatabase = TestDatabaseUtil.readDatabaseFileFromDisk(expectedDatabaseFile, transformer);
+		MemDatabase actualDatabase = TestDatabaseUtil.readDatabaseFileFromDisk(actualDatabaseFile, transformer);
 		
 		assertDatabaseEquals(expectedDatabase, actualDatabase);
 	}
 
-	public static void assertDatabaseEquals(Database expectedDatabase, Database actualDatabase) {
+	public static void assertDatabaseEquals(MemDatabase expectedDatabase, MemDatabase actualDatabase) {
 		logger.log(Level.INFO, "--");
 		logger.log(Level.INFO, "Now comparing two databases.");
 		logger.log(Level.INFO, "DON'T WORRY. This can take a long time or even overload the heap space.");
 		
-		List<IDatabaseVersion> writtenDatabaseVersions = expectedDatabase.getDatabaseVersions();
-		List<IDatabaseVersion> readDatabaseVersions = actualDatabase.getDatabaseVersions();
+		List<DatabaseVersion> writtenDatabaseVersions = expectedDatabase.getDatabaseVersions();
+		List<DatabaseVersion> readDatabaseVersions = actualDatabase.getDatabaseVersions();
 		
 		assertEquals("Different number of database versions.", writtenDatabaseVersions.size(), readDatabaseVersions.size());
 			
-		for (IDatabaseVersion writtenDatabaseVersion : writtenDatabaseVersions) {
-			IDatabaseVersion readDatabaseVersion = null;
+		for (DatabaseVersion writtenDatabaseVersion : writtenDatabaseVersions) {
+			DatabaseVersion readDatabaseVersion = null;
 			
-			for (IDatabaseVersion aReadDatabaseVersion : readDatabaseVersions) {
+			for (DatabaseVersion aReadDatabaseVersion : readDatabaseVersions) {
 				if (aReadDatabaseVersion.equals(writtenDatabaseVersion)) {
 					readDatabaseVersion = aReadDatabaseVersion;
 					break;
@@ -198,7 +198,7 @@ public class TestAssertUtil {
 		logger.log(Level.INFO, "--");		
 	}	
 	
-	public static void assertDatabaseVersionEquals(IDatabaseVersion expectedDatabaseVersion, IDatabaseVersion actualDatabaseVersion) {
+	public static void assertDatabaseVersionEquals(DatabaseVersion expectedDatabaseVersion, DatabaseVersion actualDatabaseVersion) {
 		assertVectorClockEquals(expectedDatabaseVersion.getVectorClock(), actualDatabaseVersion.getVectorClock());
 		compareDatabaseVersionChunks(expectedDatabaseVersion.getChunks(), actualDatabaseVersion.getChunks());
 		compareDatabaseVersionMultiChunks(expectedDatabaseVersion.getMultiChunks(), actualDatabaseVersion.getMultiChunks());
@@ -210,25 +210,25 @@ public class TestAssertUtil {
 		assertEquals("Vector clocks differ.", expectedVectorClock, actualVectorClock);		
 	}
 
-	private static void compareDatabaseVersionChunks(Collection<IChunkEntry> writtenChunks, Collection<IChunkEntry> readChunks) {	
+	private static void compareDatabaseVersionChunks(Collection<ChunkEntry> writtenChunks, Collection<ChunkEntry> readChunks) {	
 		assertEquals("Different amount of Chunk objects.", writtenChunks.size(), readChunks.size());
 		assertTrue("Chunk objects in written/read database version different.", writtenChunks.containsAll(readChunks));
 		//assertCollectionEquals("Chunk objects in written/read database version different.", writtenChunks, readChunks);
 	}
 	
-	private static void compareDatabaseVersionMultiChunks(Collection<IMultiChunkEntry> writtenMultiChunks, Collection<IMultiChunkEntry> readMultiChunks) {
+	private static void compareDatabaseVersionMultiChunks(Collection<MultiChunkEntry> writtenMultiChunks, Collection<MultiChunkEntry> readMultiChunks) {
 		assertEquals("Different amount of MultiChunk objects.", writtenMultiChunks.size(), readMultiChunks.size());
 		assertTrue("MultiChunk objects in written/read database version different.", writtenMultiChunks.containsAll(readMultiChunks));
 		//assertCollectionEquals("MultiChunk objects in written/read database version different.", writtenMultiChunks, readMultiChunks);
 	}	
 	
-	private static void compareDatabaseVersionFileContents(Collection<IFileContent> writtenFileContents, Collection<IFileContent> readFileContents) {
+	private static void compareDatabaseVersionFileContents(Collection<FileContent> writtenFileContents, Collection<FileContent> readFileContents) {
 		assertEquals("Different amount of FileContent objects.", writtenFileContents.size(), readFileContents.size());
 		assertTrue("FileContent objects in written/read database version different.", writtenFileContents.containsAll(readFileContents));
 		//assertCollectionEquals("FileContent objects in written/read database version different.", writtenFileContents, readFileContents);
 	}	
 
-	private static void compareDatabaseVersionFileHistories(Collection<IPartialFileHistory> writtenFileHistories, Collection<IPartialFileHistory> readFileHistories) {
+	private static void compareDatabaseVersionFileHistories(Collection<PartialFileHistory> writtenFileHistories, Collection<PartialFileHistory> readFileHistories) {
 		assertTrue("FileHistory objects in written/read database version different.", writtenFileHistories.containsAll(readFileHistories));
 	}		
 }
