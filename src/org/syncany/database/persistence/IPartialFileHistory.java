@@ -21,7 +21,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 
-public interface IPartialFileHistory {
+public interface IPartialFileHistory extends Cloneable {
 
 	public Long getFileId();
 	
@@ -42,4 +42,5 @@ public interface IPartialFileHistory {
     
     public void addFileVersion(IFileVersion fileVersion);
     
+    public IPartialFileHistory clone();
 }

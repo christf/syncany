@@ -28,6 +28,7 @@ import org.syncany.database.ChunkEntry.ChunkEntryId;
 import org.syncany.database.persistence.IChunkEntry;
 import org.syncany.database.persistence.IDatabaseVersion;
 import org.syncany.database.persistence.IFileContent;
+import org.syncany.database.persistence.IFileVersion;
 import org.syncany.database.persistence.IFileVersion.FileStatus;
 import org.syncany.database.persistence.IMultiChunkEntry;
 import org.syncany.database.persistence.IPartialFileHistory;
@@ -56,18 +57,18 @@ public class Database {
 	
     // Caches
     private DatabaseVersion fullDatabaseVersionCache;
-    private Map<String, PartialFileHistory> filenameHistoryCache;
-    private Map<VectorClock, DatabaseVersion> databaseVersionIdCache;
-    private Map<ByteArray, List<PartialFileHistory>> contentChecksumFileHistoriesCache;
+    private Map<String, IPartialFileHistory> filenameHistoryCache;
+    private Map<VectorClock, IDatabaseVersion> databaseVersionIdCache;
+    private Map<ByteArray, List<IPartialFileHistory>> contentChecksumFileHistoriesCache;
 
     public Database() {
     	databaseVersions = new ArrayList<IDatabaseVersion>();    	
         
     	// Caches
     	fullDatabaseVersionCache = new DatabaseVersion();    	
-    	filenameHistoryCache = new HashMap<String, PartialFileHistory>();
-    	databaseVersionIdCache = new HashMap<VectorClock, DatabaseVersion>();
-    	contentChecksumFileHistoriesCache = new HashMap<ByteArray, List<PartialFileHistory>>();
+    	filenameHistoryCache = new HashMap<String, IPartialFileHistory>();
+    	databaseVersionIdCache = new HashMap<VectorClock, IDatabaseVersion>();
+    	contentChecksumFileHistoriesCache = new HashMap<ByteArray, List<IPartialFileHistory>>();
     }   	
 	
 	public IDatabaseVersion getLastDatabaseVersion() {
@@ -90,7 +91,7 @@ public class Database {
 		return Collections.unmodifiableList(databaseVersions);
 	}	
 
-	public DatabaseVersion getDatabaseVersion(VectorClock vectorClock) {
+	public IDatabaseVersion getDatabaseVersion(VectorClock vectorClock) {
 		return databaseVersionIdCache.get(vectorClock);
 	}	
 
@@ -113,11 +114,11 @@ public class Database {
 		return fullDatabaseVersionCache.getMultiChunk(chunk);
 	}	
 	
-	public PartialFileHistory getFileHistory(String relativeFilePath) {
+	public IPartialFileHistory getFileHistory(String relativeFilePath) {
 		return filenameHistoryCache.get(relativeFilePath); 
 	}
 	
-	public List<PartialFileHistory> getFileHistories(byte[] fileContentChecksum) {
+	public List<IPartialFileHistory> getFileHistories(byte[] fileContentChecksum) {
 		return contentChecksumFileHistoriesCache.get(new ByteArray(fileContentChecksum));
 	}	
 	
@@ -157,7 +158,7 @@ public class Database {
 		}
 	} 	
 
-	public void removeDatabaseVersion(DatabaseVersion databaseVersion) {
+	public void removeDatabaseVersion(IDatabaseVersion databaseVersion) {
 		databaseVersions.remove(databaseVersion);
 		
 		// Populate caches
@@ -172,16 +173,16 @@ public class Database {
 	private void updateContentChecksumCache() {
 		contentChecksumFileHistoriesCache.clear();
 		
-		for (PartialFileHistory fullFileHistory : fullDatabaseVersionCache.getFileHistories()) {
+		for (IPartialFileHistory fullFileHistory : fullDatabaseVersionCache.getFileHistories()) {
 			byte[] lastVersionChecksum = fullFileHistory.getLastVersion().getChecksum();
 			
 			if (lastVersionChecksum != null) {
 				ByteArray lastVersionChecksumByteArray = new ByteArray(lastVersionChecksum);
-				List<PartialFileHistory> historiesWithVersionsWithSameChecksum = contentChecksumFileHistoriesCache.get(lastVersionChecksumByteArray);
+				List<IPartialFileHistory> historiesWithVersionsWithSameChecksum = contentChecksumFileHistoriesCache.get(lastVersionChecksumByteArray);
 				
 				// Create if it does not exist
 				if (historiesWithVersionsWithSameChecksum == null) {
-					historiesWithVersionsWithSameChecksum = new ArrayList<PartialFileHistory>();
+					historiesWithVersionsWithSameChecksum = new ArrayList<IPartialFileHistory>();
 				}
 				
 				// Add to cache
@@ -223,8 +224,8 @@ public class Database {
 		// TODO [medium] Performance: This throws away the unchanged entries. It should only update new database version
 		filenameHistoryCache.clear(); 
 		 
-		for (PartialFileHistory cacheFileHistory : fullDatabaseVersionCache.getFileHistories()) {
-			FileVersion lastVersion = cacheFileHistory.getLastVersion();
+		for (IPartialFileHistory cacheFileHistory : fullDatabaseVersionCache.getFileHistories()) {
+			IFileVersion lastVersion = cacheFileHistory.getLastVersion();
 			String fileName = lastVersion.getPath();
 			
 			if (lastVersion.getStatus() != FileStatus.DELETED) {
@@ -233,14 +234,14 @@ public class Database {
 		}		
 	}
 	
-	private void updateDatabaseVersionIdCache(DatabaseVersion newDatabaseVersion) {
+	private void updateDatabaseVersionIdCache(IDatabaseVersion newDatabaseVersion) {
 		databaseVersionIdCache.put(newDatabaseVersion.getVectorClock(), newDatabaseVersion);
 	}
 	
 	private void updateDatabaseVersionIdCache() {
 		databaseVersionIdCache.clear();
 		
-		for (DatabaseVersion databaseVersion : databaseVersions) {
+		for (IDatabaseVersion databaseVersion : databaseVersions) {
 			updateDatabaseVersionIdCache(databaseVersion);
 		}
 	}
@@ -248,42 +249,42 @@ public class Database {
 	private void updateFullDatabaseVersionCache() {
 		fullDatabaseVersionCache = new DatabaseVersion();
 		
-		for (DatabaseVersion databaseVersion : databaseVersions) {
+		for (IDatabaseVersion databaseVersion : databaseVersions) {
 			updateFullDatabaseVersionCache(databaseVersion);
 		}
 	}
 	
-	private void updateFullDatabaseVersionCache(DatabaseVersion newDatabaseVersion) {
+	private void updateFullDatabaseVersionCache(IDatabaseVersion newDatabaseVersion) {
 		// Chunks
-		for (ChunkEntry sourceChunk : newDatabaseVersion.getChunks()) {
+		for (IChunkEntry sourceChunk : newDatabaseVersion.getChunks()) {
 			if (fullDatabaseVersionCache.getChunk(sourceChunk.getChecksum()) == null) {
 				fullDatabaseVersionCache.addChunk(sourceChunk);
 			}
 		}
 		
 		// Multichunks
-		for (MultiChunkEntry sourceMultiChunk : newDatabaseVersion.getMultiChunks()) {
+		for (IMultiChunkEntry sourceMultiChunk : newDatabaseVersion.getMultiChunks()) {
 			if (fullDatabaseVersionCache.getMultiChunk(sourceMultiChunk.getId()) == null) {
 				fullDatabaseVersionCache.addMultiChunk(sourceMultiChunk);
 			}
 		}
 		
 		// Contents
-		for (FileContent sourceFileContent : newDatabaseVersion.getFileContents()) {
+		for (IFileContent sourceFileContent : newDatabaseVersion.getFileContents()) {
 			if (fullDatabaseVersionCache.getFileContent(sourceFileContent.getChecksum()) == null) {
 				fullDatabaseVersionCache.addFileContent(sourceFileContent);
 			}
 		}		
 		
 		// Histories
-		for (PartialFileHistory sourceFileHistory : newDatabaseVersion.getFileHistories()) {
-			PartialFileHistory targetFileHistory = fullDatabaseVersionCache.getFileHistory(sourceFileHistory.getFileId());
+		for (IPartialFileHistory sourceFileHistory : newDatabaseVersion.getFileHistories()) {
+			IPartialFileHistory targetFileHistory = fullDatabaseVersionCache.getFileHistory(sourceFileHistory.getFileId());
 			
 			if (targetFileHistory == null) {
-				fullDatabaseVersionCache.addFileHistory((PartialFileHistory) sourceFileHistory.clone());
+				fullDatabaseVersionCache.addFileHistory((IPartialFileHistory) sourceFileHistory.clone());
 			}
 			else {
-				for (FileVersion sourceFileVersion : sourceFileHistory.getFileVersions().values()) {
+				for (IFileVersion sourceFileVersion : sourceFileHistory.getFileVersions().values()) {
 					if (targetFileHistory.getFileVersion(sourceFileVersion.getVersion()) == null) {
 						targetFileHistory.addFileVersion(sourceFileVersion);
 					}

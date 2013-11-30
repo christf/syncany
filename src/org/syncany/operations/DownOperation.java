@@ -50,11 +50,14 @@ import org.syncany.database.Database;
 import org.syncany.database.DatabaseDAO;
 import org.syncany.database.DatabaseVersion;
 import org.syncany.database.DatabaseVersionHeader;
-import org.syncany.database.FileContent;
 import org.syncany.database.FileVersion;
 import org.syncany.database.MultiChunkEntry;
 import org.syncany.database.VectorClock;
 import org.syncany.database.XmlDatabaseDAO;
+import org.syncany.database.persistence.IDatabaseVersion;
+import org.syncany.database.persistence.IDatabaseVersionHeader;
+import org.syncany.database.persistence.IFileContent;
+import org.syncany.database.persistence.IMultiChunkEntry;
 import org.syncany.operations.actions.FileCreatingFileSystemAction;
 import org.syncany.operations.actions.FileSystemAction;
 import org.syncany.operations.actions.FileSystemAction.InconsistentFileSystemException;
@@ -181,17 +184,17 @@ public class DownOperation extends Operation {
 			FileSystemActionReconciliator actionReconciliator = new FileSystemActionReconciliator(config, localDatabase, result);
 			List<FileSystemAction> actions = actionReconciliator.determineFileSystemActions(winnersDatabase);
 
-			Set<MultiChunkEntry> unknownMultiChunks = determineRequiredMultiChunks(actions, winnersDatabase);
+			Set<IMultiChunkEntry> unknownMultiChunks = determineRequiredMultiChunks(actions, winnersDatabase);
 			downloadAndDecryptMultiChunks(unknownMultiChunks);
 
 			applyFileSystemActions(actions);
 
 			// Add winners database to local database
 			// Note: This must happen AFTER the file system stuff, because we compare the winners database with the local database!
-			for (DatabaseVersionHeader applyDatabaseVersionHeader : winnersApplyBranch.getAll()) {
+			for (IDatabaseVersionHeader applyDatabaseVersionHeader : winnersApplyBranch.getAll()) {
 				logger.log(Level.INFO, "   + Applying database version " + applyDatabaseVersionHeader.getVectorClock());
 
-				DatabaseVersion applyDatabaseVersion = winnersDatabase.getDatabaseVersion(applyDatabaseVersionHeader.getVectorClock());
+				IDatabaseVersion applyDatabaseVersion = winnersDatabase.getDatabaseVersion(applyDatabaseVersionHeader.getVectorClock());
 				localDatabase.addDatabaseVersion(applyDatabaseVersion);
 			}
 
@@ -222,9 +225,9 @@ public class DownOperation extends Operation {
 			logger.log(Level.INFO, "  + Pruning databases locally ...");
 			Database dirtyDatabase = new Database();
 
-			for (DatabaseVersionHeader databaseVersionHeader : localPruneBranch.getAll()) {
+			for (IDatabaseVersionHeader databaseVersionHeader : localPruneBranch.getAll()) {
 				// Database version
-				DatabaseVersion databaseVersion = localDatabase.getDatabaseVersion(databaseVersionHeader.getVectorClock());
+				IDatabaseVersion databaseVersion = localDatabase.getDatabaseVersion(databaseVersionHeader.getVectorClock());
 				dirtyDatabase.addDatabaseVersion(databaseVersion);
 
 				// Remove database version locally
@@ -268,10 +271,10 @@ public class DownOperation extends Operation {
 		logger.log(Level.INFO, "- Stitching branches ...");
 		Branches allStitchedBranches = databaseReconciliator.stitchBranches(unknownRemoteBranches, config.getMachineName(), localBranch);
 
-		DatabaseVersionHeader lastCommonHeader = databaseReconciliator.findLastCommonDatabaseVersionHeader(localBranch, allStitchedBranches);
-		TreeMap<String, DatabaseVersionHeader> firstConflictingHeaders = databaseReconciliator.findFirstConflictingDatabaseVersionHeader(lastCommonHeader, allStitchedBranches);
-		TreeMap<String, DatabaseVersionHeader> winningFirstConflictingHeaders = databaseReconciliator.findWinningFirstConflictingDatabaseVersionHeaders(firstConflictingHeaders);
-		Entry<String, DatabaseVersionHeader> winnersWinnersLastDatabaseVersionHeader = databaseReconciliator.findWinnersWinnersLastDatabaseVersionHeader(winningFirstConflictingHeaders, allStitchedBranches);
+		IDatabaseVersionHeader lastCommonHeader = databaseReconciliator.findLastCommonDatabaseVersionHeader(localBranch, allStitchedBranches);
+		TreeMap<String, IDatabaseVersionHeader> firstConflictingHeaders = databaseReconciliator.findFirstConflictingDatabaseVersionHeader(lastCommonHeader, allStitchedBranches);
+		TreeMap<String, IDatabaseVersionHeader> winningFirstConflictingHeaders = databaseReconciliator.findWinningFirstConflictingDatabaseVersionHeaders(firstConflictingHeaders);
+		Entry<String, IDatabaseVersionHeader> winnersWinnersLastDatabaseVersionHeader = databaseReconciliator.findWinnersWinnersLastDatabaseVersionHeader(winningFirstConflictingHeaders, allStitchedBranches);
 
 		if (logger.isLoggable(Level.FINEST)) {
 			logger.log(Level.FINEST, "- Database reconciliation results:");
@@ -293,8 +296,8 @@ public class DownOperation extends Operation {
 		return winnersBranch;
 	}
 
-	private Set<MultiChunkEntry> determineRequiredMultiChunks(List<FileSystemAction> actions, Database winnersDatabase) {
-		Set<MultiChunkEntry> multiChunksToDownload = new HashSet<MultiChunkEntry>();
+	private Set<IMultiChunkEntry> determineRequiredMultiChunks(List<FileSystemAction> actions, Database winnersDatabase) {
+		Set<IMultiChunkEntry> multiChunksToDownload = new HashSet<IMultiChunkEntry>();
 
 		for (FileSystemAction action : actions) {
 			if (action instanceof FileCreatingFileSystemAction) { // TODO [low] This adds ALL multichunks even though some might be available locally
@@ -305,10 +308,10 @@ public class DownOperation extends Operation {
 		return multiChunksToDownload;
 	}
 
-	private Collection<MultiChunkEntry> determineMultiChunksToDownload(FileVersion fileVersion, Database localDatabase, Database winnersDatabase) {
-		Set<MultiChunkEntry> multiChunksToDownload = new HashSet<MultiChunkEntry>();
+	private Collection<IMultiChunkEntry> determineMultiChunksToDownload(FileVersion fileVersion, Database localDatabase, Database winnersDatabase) {
+		Set<IMultiChunkEntry> multiChunksToDownload = new HashSet<IMultiChunkEntry>();
 
-		FileContent winningFileContent = localDatabase.getContent(fileVersion.getChecksum());
+		IFileContent winningFileContent = localDatabase.getContent(fileVersion.getChecksum());
 
 		if (winningFileContent == null) {
 			winningFileContent = winnersDatabase.getContent(fileVersion.getChecksum());
@@ -321,7 +324,7 @@ public class DownOperation extends Operation {
 																					// files ChunkPosition (chunk123 at file12, offset 200, size 250)
 
 			for (ChunkEntryId chunkChecksum : fileChunks) {
-				MultiChunkEntry multiChunkForChunk = localDatabase.getMultiChunkForChunk(chunkChecksum);
+				IMultiChunkEntry multiChunkForChunk = localDatabase.getMultiChunkForChunk(chunkChecksum);
 
 				if (multiChunkForChunk == null) {
 					multiChunkForChunk = winnersDatabase.getMultiChunkForChunk(chunkChecksum);
@@ -365,12 +368,12 @@ public class DownOperation extends Operation {
 		}
 	}
 
-	private void downloadAndDecryptMultiChunks(Set<MultiChunkEntry> unknownMultiChunks) throws StorageException, IOException {
+	private void downloadAndDecryptMultiChunks(Set<IMultiChunkEntry> unknownMultiChunks) throws StorageException, IOException {
 		logger.log(Level.INFO, "- Downloading and extracting multichunks ...");
 
 		// TODO [medium] Check existing files by checksum and do NOT download them if they exist locally, or copy them
 
-		for (MultiChunkEntry multiChunkEntry : unknownMultiChunks) {
+		for (IMultiChunkEntry multiChunkEntry : unknownMultiChunks) {
 			File localEncryptedMultiChunkFile = config.getCache().getEncryptedMultiChunkFile(multiChunkEntry.getId());
 			File localDecryptedMultiChunkFile = config.getCache().getDecryptedMultiChunkFile(multiChunkEntry.getId());
 			MultiChunkRemoteFile remoteMultiChunkFile = new MultiChunkRemoteFile(multiChunkEntry.getId());
@@ -412,7 +415,7 @@ public class DownOperation extends Operation {
 		VectorClock clientVersionFrom = null;
 		VectorClock clientVersionTo = null;
 
-		for (DatabaseVersionHeader databaseVersionHeader : winnersApplyBranch.getAll()) {
+		for (IDatabaseVersionHeader databaseVersionHeader : winnersApplyBranch.getAll()) {
 			// First of range for this client
 			if (clientName == null || !clientName.equals(databaseVersionHeader.getClient())) {
 				clientName = databaseVersionHeader.getClient();
@@ -458,13 +461,13 @@ public class DownOperation extends Operation {
 
 			DatabaseRemoteFile remoteDatabaseFile = new DatabaseRemoteFile(remoteDatabaseFileInCache.getName());
 			dbDAO.load(remoteDatabase, remoteDatabaseFileInCache, true); // only load headers!
-			List<DatabaseVersion> remoteDatabaseVersions = remoteDatabase.getDatabaseVersions();
+			List<IDatabaseVersion> remoteDatabaseVersions = remoteDatabase.getDatabaseVersions();
 
 			// Populate branches
 			Branch remoteClientBranch = unknownRemoteBranches.getBranch(remoteDatabaseFile.getClientName(), true);
 
-			for (DatabaseVersion remoteDatabaseVersion : remoteDatabaseVersions) {
-				DatabaseVersionHeader header = remoteDatabaseVersion.getHeader();
+			for (IDatabaseVersion remoteDatabaseVersion : remoteDatabaseVersions) {
+				IDatabaseVersionHeader header = remoteDatabaseVersion.getHeader();
 				remoteClientBranch.add(header);
 			}
 		}
@@ -525,7 +528,7 @@ public class DownOperation extends Operation {
 		private DownResultCode resultCode;
 		private ChangeSet changeSet = new ChangeSet();
 		private Set<String> downloadedUnknownDatabases = new HashSet<String>();
-		private Set<MultiChunkEntry> downloadedMultiChunks = new HashSet<MultiChunkEntry>();
+		private Set<IMultiChunkEntry> downloadedMultiChunks = new HashSet<IMultiChunkEntry>();
 
 		public DownResultCode getResultCode() {
 			return resultCode;
@@ -551,11 +554,11 @@ public class DownOperation extends Operation {
 			this.downloadedUnknownDatabases = downloadedUnknownDatabases;
 		}
 
-		public Set<MultiChunkEntry> getDownloadedMultiChunks() {
+		public Set<IMultiChunkEntry> getDownloadedMultiChunks() {
 			return downloadedMultiChunks;
 		}
 
-		public void setDownloadedMultiChunks(Set<MultiChunkEntry> downloadedMultiChunks) {
+		public void setDownloadedMultiChunks(Set<IMultiChunkEntry> downloadedMultiChunks) {
 			this.downloadedMultiChunks = downloadedMultiChunks;
 		}
 	}

@@ -30,6 +30,8 @@ import org.syncany.database.FileVersionComparator;
 import org.syncany.database.FileVersionComparator.FileChange;
 import org.syncany.database.FileVersionComparator.FileVersionComparison;
 import org.syncany.database.PartialFileHistory;
+import org.syncany.database.persistence.IFileVersion;
+import org.syncany.database.persistence.IPartialFileHistory;
 import org.syncany.operations.DownOperation.DownOperationResult;
 import org.syncany.operations.actions.ChangeFileSystemAction;
 import org.syncany.operations.actions.DeleteFileSystemAction;
@@ -138,15 +140,15 @@ public class FileSystemActionReconciliator {
 		
 		logger.log(Level.INFO, "- Determine filesystem actions ...");
 		
-		for (PartialFileHistory winningFileHistory : winnersDatabase.getFileHistories()) {
+		for (IPartialFileHistory winningFileHistory : winnersDatabase.getFileHistories()) {
 			// Get remote file version and content
-			FileVersion winningLastVersion = winningFileHistory.getLastVersion();			
+			IFileVersion winningLastVersion = winningFileHistory.getLastVersion();			
 			File winningLastFile = new File(config.getLocalDir()+File.separator+winningLastVersion.getPath());
 			
 			// Get local file version and content
-			PartialFileHistory localFileHistory = localDatabase.getFileHistory(winningFileHistory.getFileId());
+			IPartialFileHistory localFileHistory = localDatabase.getFileHistory(winningFileHistory.getFileId());
 			
-			FileVersion localLastVersion = (localFileHistory != null) ? localFileHistory.getLastVersion() : null;
+			IFileVersion localLastVersion = (localFileHistory != null) ? localFileHistory.getLastVersion() : null;
 			File localLastFile = (localLastVersion != null) ? new File(config.getLocalDir()+File.separator+localLastVersion.getPath()) : null;
 			
 			logger.log(Level.INFO, "   + Comparing local version: "+localLastVersion);			

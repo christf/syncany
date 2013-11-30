@@ -24,7 +24,7 @@ import java.util.List;
 
 import org.syncany.config.Config;
 import org.syncany.database.Database;
-import org.syncany.database.DatabaseVersion;
+import org.syncany.database.persistence.IDatabaseVersion;
 
 public class CleanupOperation extends Operation {
 
@@ -48,7 +48,7 @@ public class CleanupOperation extends Operation {
 	@Override
 	public CleanupOperationResult execute() throws Exception {
 		//1. Identify DatabaseVersions older than x days
-		List<DatabaseVersion> identifiedDatabaseVersions = identifyDatabaseVersions(options);
+		List<IDatabaseVersion> identifiedDatabaseVersions = identifyDatabaseVersions(options);
 		
 		if(!identifiedDatabaseVersions.isEmpty()) {
 			//2. if > 1 -> Write Lockfile to repository
@@ -65,8 +65,8 @@ public class CleanupOperation extends Operation {
 		return null;
 	}
 	
-	public List<DatabaseVersion> identifyDatabaseVersions(CleanupOperationOptions options) {
-		List<DatabaseVersion> identifiedDatabaseVersions = new ArrayList<DatabaseVersion>();
+	public List<IDatabaseVersion> identifyDatabaseVersions(CleanupOperationOptions options) {
+		List<IDatabaseVersion> identifiedDatabaseVersions = new ArrayList<IDatabaseVersion>();
 		
 		switch(options.getStrategy()) {
 		case DAYRANGE:
@@ -74,10 +74,10 @@ public class CleanupOperation extends Operation {
 			calendar.add(Calendar.DATE, -options.getCleanUpOlderThanDays());  			
 
 			Date expiration = calendar.getTime();
-			List<DatabaseVersion> existingDatabaseVersions = this.database.getDatabaseVersions();
+			List<IDatabaseVersion> existingDatabaseVersions = this.database.getDatabaseVersions();
 			
 			// TODO [medium] Performance: inefficient
-			for (DatabaseVersion databaseVersion : existingDatabaseVersions) {
+			for (IDatabaseVersion databaseVersion : existingDatabaseVersions) {
 				if(databaseVersion.getTimestamp().before(expiration)) {
 					identifiedDatabaseVersions.add(databaseVersion);
 				}
