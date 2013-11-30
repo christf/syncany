@@ -25,8 +25,8 @@ import static org.syncany.tests.util.TestAssertUtil.assertFileListEquals;
 import org.junit.Test;
 import org.syncany.connection.plugins.Connection;
 import org.syncany.database.Database;
-import org.syncany.database.PartialFileHistory;
 import org.syncany.database.persistence.IFileVersion;
+import org.syncany.database.persistence.IPartialFileHistory;
 import org.syncany.tests.util.TestClient;
 import org.syncany.tests.util.TestConfigUtil;
 
@@ -58,8 +58,8 @@ public class RenameFileWithDiffModifiedDateScenarioTest {
 		
 		Database clientDatabaseB = clientB.loadLocalDatabase();
 		
-		PartialFileHistory file1Orig = clientDatabaseB.getFileHistory("A-file1-moved.jpg");
-		PartialFileHistory file1WithDiffLastModDate = clientDatabaseB.getFileHistory("A-file1-with-different-modified-date-moved.jpg");
+		IPartialFileHistory file1Orig = clientDatabaseB.getFileHistory("A-file1-moved.jpg");
+		IPartialFileHistory file1WithDiffLastModDate = clientDatabaseB.getFileHistory("A-file1-with-different-modified-date-moved.jpg");
 		
 		assertNotNull(file1Orig);
 		assertNotNull(file1WithDiffLastModDate);

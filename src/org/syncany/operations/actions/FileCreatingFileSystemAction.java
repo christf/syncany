@@ -30,7 +30,6 @@ import org.syncany.chunk.MultiChunker;
 import org.syncany.config.Config;
 import org.syncany.database.ChunkEntry.ChunkEntryId;
 import org.syncany.database.Database;
-import org.syncany.database.FileVersion;
 import org.syncany.database.persistence.IFileContent;
 import org.syncany.database.persistence.IFileVersion;
 import org.syncany.database.persistence.IFileVersion.FileType;
@@ -42,7 +41,7 @@ public abstract class FileCreatingFileSystemAction extends FileSystemAction {
 		super(config, localDatabase, winningDatabase, file1, file2);
 	}
 
-	protected void createFileFolderOrSymlink(FileVersion reconstructedFileVersion) throws Exception {		
+	protected void createFileFolderOrSymlink(IFileVersion reconstructedFileVersion) throws Exception {		
 		if (reconstructedFileVersion.getType() == FileType.FILE) {
 			createFile(reconstructedFileVersion);			
 		}
@@ -58,7 +57,7 @@ public abstract class FileCreatingFileSystemAction extends FileSystemAction {
 		}
 	}
 	
-	protected void createFolder(FileVersion reconstructedFileVersion) throws IOException {
+	protected void createFolder(IFileVersion reconstructedFileVersion) throws IOException {
 		File reconstructedFilesAtFinalLocation = getAbsolutePathFile(reconstructedFileVersion.getPath());
 		logger.log(Level.INFO, "     - Creating folder at "+reconstructedFilesAtFinalLocation+" ...");
 		
@@ -66,7 +65,7 @@ public abstract class FileCreatingFileSystemAction extends FileSystemAction {
 		setFileAttributes(reconstructedFileVersion);		
 	}
 
-	protected void createFile(FileVersion reconstructedFileVersion) throws Exception {
+	protected void createFile(IFileVersion reconstructedFileVersion) throws Exception {
 		File reconstructedFileAtFinalLocation = getAbsolutePathFile(reconstructedFileVersion.getPath());
 		File reconstructedFileInCache = config.getCache().createTempFile("file-"+reconstructedFileVersion.getName()+"-"+reconstructedFileVersion.getVersion());
 		logger.log(Level.INFO, "     - Creating file "+reconstructedFileVersion.getPath()+" to "+reconstructedFileInCache+" ...");				

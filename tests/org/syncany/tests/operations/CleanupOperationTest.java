@@ -29,6 +29,7 @@ import org.junit.Test;
 import org.syncany.config.Config;
 import org.syncany.database.Database;
 import org.syncany.database.DatabaseVersion;
+import org.syncany.database.persistence.IDatabaseVersion;
 import org.syncany.operations.CleanupOperation;
 import org.syncany.operations.CleanupOperation.CleanupOperationOptions;
 import org.syncany.operations.CleanupOperation.CleanupOperationStrategy;
@@ -55,7 +56,7 @@ public class CleanupOperationTest {
 		CleanupOperationOptions options = new CleanupOperationOptions();
 		options.setCleanUpOlderThanDays(30);
 		options.setStrategy(CleanupOperationStrategy.DAYRANGE);
-		List<DatabaseVersion> identifiedDatabaseVersions = operation.identifyDatabaseVersions(options);
+		List<IDatabaseVersion> identifiedDatabaseVersions = operation.identifyDatabaseVersions(options);
 		
 		assertEquals(identifiedDatabaseVersions, olderDatabaseVersions);
 	}
