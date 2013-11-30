@@ -5,6 +5,7 @@ import java.util.Date;
 
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
+import javax.persistence.Transient;
 
 import org.syncany.database.VectorClock;
 
@@ -17,15 +18,19 @@ public class DatabaseVersionHeaderEntity implements Serializable, IDatabaseVersi
 	@Column(name = "date", nullable = false)
     private Date date;
 	
+	@Transient
+	private VectorClock vectorClock; 
+
 	@Column(name = "vectorclock", nullable = false)
-	private VectorClock vectorClock; // vector clock, machine name to database version map
-	
+	private String vectorClockEncoded; 
+		
 	@Column(name = "client", nullable = false)
 	private String client;
         
     public DatabaseVersionHeaderEntity() {
     	this.date = new Date();
     	this.vectorClock = new VectorClock();
+    	this.vectorClockEncoded = "";
     	this.client = "UnknownMachine";
     }    
 
@@ -38,36 +43,21 @@ public class DatabaseVersionHeaderEntity implements Serializable, IDatabaseVersi
 	}
 	
 	public VectorClock getVectorClock() {
+		if (vectorClock == null) {
+			try {
+				vectorClock = VectorClock.fromString(vectorClockEncoded);
+			}
+			catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+		
 		return vectorClock;
-	}
-	
-	public VectorClock getPreviousVectorClock() {
-		VectorClock previousVectorClock = vectorClock.clone();
-
-		Long lastPreviousClientLocalClock = previousVectorClock.get(client);
-		
-		if (lastPreviousClientLocalClock == null) {
-			throw new RuntimeException("Previous client '"+client+"' must be present in vector clock of database version header "+this.toString()+".");
-		}
-		
-		if (lastPreviousClientLocalClock == 1) {
-			previousVectorClock.remove(client);
-			
-			if (previousVectorClock.size() == 0) {
-				return new VectorClock();
-			}
-			else {
-				return previousVectorClock;
-			}
-		}
-		else {
-			previousVectorClock.setClock(client, lastPreviousClientLocalClock-1);
-			return previousVectorClock;
-		}		
-	}
+	}	
 	
 	public void setVectorClock(VectorClock vectorClock) {
 		this.vectorClock = vectorClock;
+		this.vectorClockEncoded = vectorClock.toString();
 	}
 	
 	public String getClient() {

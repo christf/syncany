@@ -18,6 +18,8 @@
 package org.syncany.database;
 
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Implements a vector clock that records the time stamps of all send and receive
@@ -39,6 +41,7 @@ import java.util.TreeMap;
  */
 public class VectorClock extends TreeMap<String, Long> {
 	private static final long serialVersionUID = 109876543L;
+	private static Pattern vectorClockElementPattern = Pattern.compile("([^\\d]+)(\\d+)");
 
 	public enum VectorClockComparison {
 		SMALLER, GREATER, EQUAL, SIMULTANEOUS;
@@ -113,6 +116,30 @@ public class VectorClock extends TreeMap<String, Long> {
 		lText += ")";
 
 		return lText;
+	}
+	
+	public static VectorClock fromString(String vectorClockString) throws Exception {
+		String[] vectorClockElements = vectorClockString.split(",");		
+		VectorClock vectorClock = new VectorClock();
+		
+		for (String vectorClockElement : vectorClockElements) {
+			if ("".equals(vectorClockElement.trim())) {
+				continue;
+			}
+			
+			Matcher vectorClockElementMatcher = vectorClockElementPattern.matcher(vectorClockElement);
+			
+			if (!vectorClockElementMatcher.matches()) {
+				throw new Exception("Invalid vector clock element string: "+vectorClockElement);
+			}
+			
+			String vectorClockMachineName = vectorClockElementMatcher.group(1);
+			long vectorClockTime = Long.parseLong(vectorClockElementMatcher.group(2));
+			
+			vectorClock.setClock(vectorClockMachineName, vectorClockTime);
+		}
+		
+		return vectorClock;
 	}
 
 	/**
