@@ -20,13 +20,16 @@ package org.syncany.connection.plugins.bt;
 import java.io.File;
 import java.util.ArrayList;
 
+// TODO [medium] Use @Test instead
+// TODO [medium] For tests, you can use the TestFileUtil methods to create test files
+
 /**
  * @author christof
  *
  */
-public class CreateTorrentTest {
+public class TorrentCreatorTest {
 	public static void main(String[] args) {
-		CreateTorrent t = new CreateTorrent();
+		TorrentCreator t = new TorrentCreator();
 		ArrayList<File> files = new ArrayList<File>();
 		files.add(new File("torrentdata/Piece.class"));
 		files.add(new File("torrentdata/ttorrent-1.5-SNAPSHOT.jar"));

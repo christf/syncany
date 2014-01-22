@@ -22,55 +22,60 @@ import jBittorrentAPI.TorrentProcessor;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-class CreateTorrent {
-	private static final Logger logger = Logger.getLogger(CreateTorrent.class.getSimpleName());
+class TorrentCreator {
+	private static final Logger logger = Logger.getLogger(TorrentCreator.class.getSimpleName());
 
-	public String create(String torrentfile, String announceurl, ArrayList<File> files) {
-		return create(torrentfile, announceurl, files, "", "", "torrent");
+	public String create(String torrentfile, String announceUrl, List<File> files) {
+		return create(torrentfile, announceUrl, files, "", "", "torrent");
 	}
 
-	private int calcpiecesize(ArrayList<File> files) {
-		int piecesize;
-		long wsum = 0;
+	private int calcpiecesize(List<File> files) {
+		int pieceSize;
+		long dataSize = 0;
 
 		for (File file : files) {
-			wsum += file.length();
+			dataSize += file.length();
 		}
 
-		long swert = wsum / 1000 / 1024;
+		// a Torrent should have below 1500 pieces - adjust the pieceSize accordingly
+		long sizeValue = dataSize / 1500 / 1024;
 
-		if (swert < 32)
-			piecesize = 32;
-		else if (swert < 64)
-			piecesize = 64;
-		else if (swert < 256)
-			piecesize = 256;
-		else if (swert < 512)
-			piecesize = 512;
-		else
-			piecesize = 1024;
+		if (sizeValue < 32) {
+			pieceSize = 32;
+		}
+		else if (sizeValue < 64) {
+			pieceSize = 64;
+		}
+		else if (sizeValue < 256) {
+			pieceSize = 256;
+		}
+		else if (sizeValue < 512) {
+			pieceSize = 512;
+		}
+		else {
+			pieceSize = 1024;
+		}
 
-		return piecesize;
-
+		return pieceSize;
 	}
 
-	public String create(String torrentfile, String announceurl, ArrayList<File> files, String author, String comment, String name) {
+	public String create(String torrentfile, String announceurl, List<File> files, String author, String comment, String name) {
 		return create(torrentfile, announceurl, files, "", "", "torrent", calcpiecesize(files));
 	}
 
-	public String create(String torrentfile, String announceurl, ArrayList<File> files, String author, String comment, String name, int piecesize) {
-		TorrentProcessor tp = new TorrentProcessor();
-		tp.setAnnounceURL(announceurl);
+	public String create(String torrentfile, String announceurl, List<File> files, String author, String comment, String name, int piecesize) {
+		TorrentProcessor torrentProcessor = new TorrentProcessor();
+		torrentProcessor.setAnnounceURL(announceurl);
 
-		tp.setName(name);
-		tp.setPieceLength(piecesize);
+		torrentProcessor.setName(name);
+		torrentProcessor.setPieceLength(piecesize);
 
 		try {
-			tp.addFiles(files);
+			torrentProcessor.addFiles(files);
 		}
 		catch (Exception e) {
 			logger.log(Level.SEVERE, "Problem when adding files to torrent:", files.toString());
@@ -78,20 +83,21 @@ class CreateTorrent {
 			System.exit(1);
 		}
 
-		tp.setCreator(author);
-		tp.setComment(comment);
+		torrentProcessor.setCreator(author);
+		torrentProcessor.setComment(comment);
 
 		// TorrentMetaInfo = null;
 		try {
 			logger.log(Level.INFO, "Hashing the files...");
-			tp.generatePieceHashes();
+			torrentProcessor.generatePieceHashes();
 			logger.log(Level.INFO, "Hash complete. Saving torrent data to file: " + torrentfile);
 			FileOutputStream fos = new FileOutputStream(torrentfile);
-			fos.write(tp.generateTorrent());
+			fos.write(torrentProcessor.generateTorrent());
 			fos.close();
-			// TODO [high] - do not write torrent to a file just to read it to obtain infohash
 
+			// TODO [high] - do not write torrent to a file just to read it to obtain infohash
 			// = readExampleFile(torrentfile);
+
 			logger.log(Level.INFO, "Torrent " + torrentfile + " created successfully.");
 		}
 		catch (Exception e) {
@@ -100,8 +106,8 @@ class CreateTorrent {
 			// TODO - major - throw a real exception here
 			System.exit(1);
 		}
-		// return (.getInfoHash().toString());
-		return "Hi";
+		// return (tmi.getInfoHash().toString());
+		return "Infohash for " + torrentfile;
 	}
 
 }
