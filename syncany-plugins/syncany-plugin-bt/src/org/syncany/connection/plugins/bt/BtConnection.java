@@ -29,11 +29,13 @@ import java.util.Map;
 import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.conn.ssl.TrustStrategy;
 import org.syncany.connection.plugins.Connection;
+import org.syncany.connection.plugins.PluginOptionSpec;
+import org.syncany.connection.plugins.PluginOptionSpec.ValueType;
+import org.syncany.connection.plugins.PluginOptionSpecs;
 import org.syncany.connection.plugins.StorageException;
 import org.syncany.connection.plugins.TransferManager;
 
 public class BtConnection implements Connection {
-	// TODO [low] This is a direct copy of WebdavConnection - find a better way to implement this
 	// This connection is solely used for metadata atm. This is stage 1 of BT support:
 	// have metadata on central storage but data shared via BT
 	private String url;
@@ -99,16 +101,11 @@ public class BtConnection implements Connection {
 		this.sslSocketFactory = new SSLSocketFactory(trustStrategy);
 	}
 
-	@Override
-	public String[] getMandatorySettings() {
-		return new String[] { "url", "username", "password" };
-	}
-
-	@Override
-	public String[] getOptionalSettings() {
-		return new String[] {};
-	}
-
+	/*
+	 * @Override public String[] getMandatorySettings() { return new String[] { "url", "username", "password" }; }
+	 * 
+	 * @Override public String[] getOptionalSettings() { return new String[] {}; }
+	 */
 	@Override
 	public String toString() {
 		return BtConnection.class.getSimpleName() + "[url=" + url + ", username=" + username + "]";
@@ -148,5 +145,12 @@ public class BtConnection implements Connection {
 
 	public SSLSocketFactory getSslSocketFactory() {
 		return sslSocketFactory;
+	}
+
+	@Override
+	public PluginOptionSpecs getOptionSpecs() {
+		return new PluginOptionSpecs(new PluginOptionSpec("url", "URL (incl. path & port)", ValueType.STRING, true, false, null),
+				new PluginOptionSpec("username", "Username", ValueType.STRING, true, false, null), new PluginOptionSpec("password", "Password",
+						ValueType.STRING, true, true, null));
 	}
 }

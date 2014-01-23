@@ -22,9 +22,17 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.URI;
+import java.nio.channels.SocketChannel;
+import java.nio.channels.UnresolvedAddressException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,10 +56,13 @@ import com.turn.ttorrent.client.SharedTorrent;
 
 // TODO [medium] use torrent library that supports DHT
 // TODO [medium] use upnp to enable seeding behind a firewall
+// FIXME [low] According to the documentation ttorrent only supports downloading single-file-torrents. Hence a multichunk corresponds to one torrent which is not memory-efficient
 
 public class BtTransferManager extends AbstractTransferManager {
 	private static final String APPLICATION_CONTENT_TYPE = "application/x-syncany";
 	private static final Logger logger = Logger.getLogger(BtTransferManager.class.getSimpleName());
+
+	private static final String announceUrl = "http://kdserv.dyndns.org:6969/announce";
 
 	private Sardine sardine;
 	private ArrayList<SeedEntry> slist;
@@ -59,6 +70,7 @@ public class BtTransferManager extends AbstractTransferManager {
 	private String repoPath;
 	private String multichunkPath;
 	private String databasePath;
+	private InetAddress inetaddress;
 
 	public BtTransferManager(BtConnection connection) {
 		super(connection);
@@ -71,6 +83,67 @@ public class BtTransferManager extends AbstractTransferManager {
 	@Override
 	public BtConnection getConnection() {
 		return (BtConnection) super.getConnection();
+	}
+
+	// TODO [feature] enable IPv6
+	private InetAddress obtainInetAddress() {
+		Enumeration<NetworkInterface> interfaces;
+
+		try {
+			interfaces = NetworkInterface.getNetworkInterfaces();
+
+			for (NetworkInterface interface_ : Collections.list(interfaces)) {
+				if (interface_.isLoopback()) {
+					continue;
+				}
+				if (!interface_.isUp()) {
+					continue;
+				}
+
+				Enumeration<InetAddress> addresses = interface_.getInetAddresses();
+				for (InetAddress address : Collections.list(addresses)) {
+					// look only for ipv4 addresses
+					if (address instanceof Inet6Address) {
+						continue;
+					}
+
+					try {
+						if (!address.isReachable(3000))
+							continue;
+					}
+					catch (IOException e) {
+						continue;
+					}
+
+					try (SocketChannel socket = SocketChannel.open()) {
+						socket.socket().setSoTimeout(3000);
+
+						// TODO [medium] make sure that this random port is not already in use on that interface
+						int port = (int) (Math.random() * 64510 + 1024);
+						socket.bind(new InetSocketAddress(address, port));
+						socket.connect(new InetSocketAddress("google.com", 80));
+					}
+					catch (IOException | UnresolvedAddressException ex) {
+						// even if there is an exception there might be a different interface which works => continue
+						continue;
+					}
+
+					String logmessage = new String();
+					logmessage = String.format("using interface: %s, ia: %s\n", interface_, address);
+					logger.info(logmessage);
+					return interface_.getInetAddresses().nextElement();
+				}
+			}
+		}
+		catch (SocketException e1) {
+			// no network interfaces found
+			e1.printStackTrace();
+		}
+
+		logger.severe("could not find a suitable network interface to use");
+		// TODO [high] get rid of System.exit
+		System.exit(1);
+		return null;
 	}
 
 	@Override
@@ -93,12 +166,15 @@ public class BtTransferManager extends AbstractTransferManager {
 			}
 		}
 
+		inetaddress = obtainInetAddress();
+
 		// TODO [high] initialize the seeding queue and start at least some clients.
 	}
 
 	@Override
 	public void disconnect() {
 		sardine = null;
+		inetaddress = null;
 	}
 
 	@Override
@@ -116,12 +192,19 @@ public class BtTransferManager extends AbstractTransferManager {
 		}
 	}
 
+	private File getTorrentForRemoteFile(RemoteFile remoteFile) {
+		File torrentFile = null;
+
+		return torrentFile;
+	}
+
 	@Override
 	public void download(RemoteFile remoteFile, File localFile) throws StorageException {
 		connect();
 
 		try {
 			Client client;
+
 			// download .torrent-file to local storage
 			String remoteURL = getRemoteFileUrl(remoteFile);
 
@@ -133,22 +216,12 @@ public class BtTransferManager extends AbstractTransferManager {
 				FileUtil.writeToFile(webdavFileInputStream, localFile);
 				webdavFileInputStream.close();
 
-				client = new Client(
-				// TODO [high] use sensible code to determine the IP-address to use here
-						InetAddress.getLocalHost(),
-
-						// Load the torrent from the torrent file and use the given
-						// output directory. Partials downloads are automatically recovered.
+				client = new Client(inetaddress,
+				// TODO [high] Load the torrent from the torrent file and use the given
+				// output directory. Partials downloads are automatically recovered.
 						SharedTorrent.fromFile(new File("/path/to/your.torrent"), localFile));
-
-				// client.setMaxDownloadRate(50.0);
-				// client.setMaxUploadRate(50.0);
-
 				client.download();
 				client.waitForCompletion();
-
-				SeedEntry s = new SeedEntry(client);
-				slist.add(s);
 			}
 			else if (isDataBaseRemoteFile(remoteFile.getClass())) {
 
@@ -165,9 +238,17 @@ public class BtTransferManager extends AbstractTransferManager {
 		connect();
 		String remoteURL = getRemoteFileUrl(remoteFile);
 
+		TorrentCreator torrentCreator = new TorrentCreator();
+		ArrayList<File> files = new ArrayList<File>();
+		files.add(localFile);
+		String torrentfile = new String(localFile.getAbsolutePath() + ".torrent");
+
+		String infohash = new String(torrentCreator.create(torrentfile, announceUrl, files));
+		logger.info("created torrent " + torrentfile + " having infohash " + infohash);
+
 		try {
 			logger.log(Level.INFO, " - Uploading local file " + localFile + " to " + remoteURL + " ...");
-			InputStream localFileInputStream = new FileInputStream(localFile);
+			InputStream localFileInputStream = new FileInputStream(torrentfile);
 
 			sardine.put(remoteURL, localFileInputStream, APPLICATION_CONTENT_TYPE);
 			localFileInputStream.close();
@@ -262,5 +343,4 @@ public class BtTransferManager extends AbstractTransferManager {
 			return repoPath;
 		}
 	}
-
 }

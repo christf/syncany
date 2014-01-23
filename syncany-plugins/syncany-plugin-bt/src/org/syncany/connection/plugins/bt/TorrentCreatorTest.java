@@ -15,12 +15,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+//@Test
+// TODO [medium] Use @Test instead
 package org.syncany.connection.plugins.bt;
 
 import java.io.File;
 import java.util.ArrayList;
 
-// TODO [medium] Use @Test instead
 // TODO [medium] For tests, you can use the TestFileUtil methods to create test files
 
 /**
