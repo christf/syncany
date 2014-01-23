@@ -111,7 +111,7 @@ public class TestLeeching {
 			System.out.println("Start to download: " + torrent.getName());
 			client.share(); // SEEDING for completion signal
 			// client.download() // DONE for completion signal
-
+			System.out.println(client.getTorrent().getHexInfoHash());
 			while (!ClientState.SEEDING.equals(client.getState())) {
 				// Check if there's an error
 				if (ClientState.ERROR.equals(client.getState())) {

@@ -111,13 +111,14 @@ public class TestSeeding {
 		final int maxseeding = 4;
 
 		ArrayList<Client> clients = new ArrayList<>();
+		InetAddress address = obtainInetAddress();
 
 		File torrentdir = new File("./torrents");
 		for (File torrent : torrentdir.listFiles()) {
 			File destination = new File("./torrentdata/");
 			destination.mkdirs();
-			Client client = new Client(obtainInetAddress(), SharedTorrent.fromFile(torrent, destination));
-			client.download();
+			Client client = new Client(address, SharedTorrent.fromFile(torrent, destination));
+			client.share();
 			clients.add(client);
 		}
 
@@ -162,7 +163,7 @@ public class TestSeeding {
 
 			TimeUnit.SECONDS.sleep(1);
 			t++;
-			System.out.println("===============================================================");
+			logger.info("===============================================================");
 		}
 		// You can optionally set download/upload rate limits
 		// in kB/second. Setting a limit to 0.0 disables rate
