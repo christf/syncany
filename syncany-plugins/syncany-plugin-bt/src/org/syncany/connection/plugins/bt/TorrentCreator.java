@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.turn.ttorrent.common.Torrent;
+
 class TorrentCreator {
 	private static final Logger logger = Logger.getLogger(TorrentCreator.class.getSimpleName());
 
@@ -73,7 +75,7 @@ class TorrentCreator {
 
 		torrentProcessor.setName(name);
 		torrentProcessor.setPieceLength(piecesize);
-
+		String infohash = null;
 		try {
 			torrentProcessor.addFiles(files);
 		}
@@ -86,7 +88,6 @@ class TorrentCreator {
 		torrentProcessor.setCreator(author);
 		torrentProcessor.setComment(comment);
 
-		// TorrentMetaInfo = null;
 		try {
 			logger.log(Level.INFO, "Hashing the files...");
 			torrentProcessor.generatePieceHashes();
@@ -95,8 +96,8 @@ class TorrentCreator {
 			fos.write(torrentProcessor.generateTorrent());
 			fos.close();
 
-			// TODO [high] - do not write torrent to a file just to read it to obtain infohash
-			// = readExampleFile(torrentfile);
+			Torrent torrent = Torrent.load(new File(torrentfile));
+			infohash = torrent.getHexInfoHash();
 
 			logger.log(Level.INFO, "Torrent " + torrentfile + " created successfully.");
 		}
@@ -106,8 +107,7 @@ class TorrentCreator {
 			// TODO - major - throw a real exception here
 			System.exit(1);
 		}
-		// return (tmi.getInfoHash().toString());
-		return "Infohash for " + torrentfile;
+		return infohash;
 	}
 
 }

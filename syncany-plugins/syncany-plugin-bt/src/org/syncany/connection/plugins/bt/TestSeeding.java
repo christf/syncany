@@ -33,6 +33,10 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.xml.sax.SAXException;
+
 import com.turn.ttorrent.client.Client;
 import com.turn.ttorrent.client.Client.ClientState;
 import com.turn.ttorrent.client.SharedTorrent;
@@ -43,8 +47,8 @@ import com.turn.ttorrent.client.peer.SharingPeer;
  *
  */
 public class TestSeeding {
+	private static final Logger logger = Logger.getLogger(TestSeeding.class.getSimpleName());
 
-	// TODO [feature] enable IPv6
 	private static InetAddress obtainInetAddress() {
 		Enumeration<NetworkInterface> interfaces;
 
@@ -61,7 +65,7 @@ public class TestSeeding {
 
 				Enumeration<InetAddress> addresses = interface_.getInetAddresses();
 				for (InetAddress address : Collections.list(addresses)) {
-					// look only for ipv4 addresses
+					// TODO [feature] at some point in time also allow IPv6
 					if (address instanceof Inet6Address) {
 						continue;
 					}
@@ -90,7 +94,7 @@ public class TestSeeding {
 					String logmessage = new String();
 					logmessage = String.format("using interface: %s, ia: %s\n", interface_, address);
 					logger.info(logmessage);
-					return interface_.getInetAddresses().nextElement();
+					return address;
 				}
 			}
 		}
@@ -105,29 +109,32 @@ public class TestSeeding {
 		return null;
 	}
 
-	private static final Logger logger = Logger.getLogger(TestSeeding.class.getSimpleName());
-
-	public static void main(String[] args) throws IOException, InterruptedException {
-		final int maxseeding = 4;
-
-		ArrayList<Client> clients = new ArrayList<>();
+	public static void main(String[] args) throws IOException, InterruptedException, SAXException, ParserConfigurationException {
+		final int maxseeding = 1;
+		Port seedingPort = new Port();
+		seedingPort.init();
+		seedingPort.map(6881, Port.protocol.TCP);
+		ArrayList<Client> clients = new ArrayList<Client>();
 		InetAddress address = obtainInetAddress();
 
 		File torrentdir = new File("./torrents");
+		int currentlyseeding = 0;
+
 		for (File torrent : torrentdir.listFiles()) {
 			File destination = new File("./torrentdata/");
 			destination.mkdirs();
 			Client client = new Client(address, SharedTorrent.fromFile(torrent, destination));
 			client.share();
+			currentlyseeding++;
 			clients.add(client);
 		}
 
-		int currentlyseeding = 0;
 		int t = 0;
 		while (t < 100) {
 			for (Client client : clients) {
 				// System.out.println(client.getTorrent().getName() + " " + client.getState());
-				client.info();
+				// client.info();
+				logger.info(client.getState().toString());
 
 				if (ClientState.WAITING.equals(client.getState())) {
 					if (currentlyseeding < maxseeding) {
@@ -149,6 +156,11 @@ public class TestSeeding {
 							numberOfInterested++;
 						}
 					}
+					logger.info(Integer.toString(numberOfInterested));
+					if (numberOfInterested == 0 && currentlyseeding > maxseeding) {
+						// client.stop(true);
+						// currentlyseeding--;
+					}
 				}
 				else if (ClientState.ERROR.equals(client.getState())) {
 					System.err.println("client error state found");
@@ -165,6 +177,7 @@ public class TestSeeding {
 			t++;
 			logger.info("===============================================================");
 		}
+
 		// You can optionally set download/upload rate limits
 		// in kB/second. Setting a limit to 0.0 disables rate
 		// limits.

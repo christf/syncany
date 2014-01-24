@@ -3,6 +3,8 @@ package org.syncany.connection.plugins.bt;
 import org.syncany.connection.plugins.Connection;
 import org.syncany.connection.plugins.Plugin;
 
+// TODO [medium] use Torrent library that supports DHT and UDP trackers
+
 public class BtPlugin extends Plugin {
 	public static final String ID = "bt";
 

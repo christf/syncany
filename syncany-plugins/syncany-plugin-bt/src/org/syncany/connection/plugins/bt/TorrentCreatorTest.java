@@ -1,4 +1,5 @@
 /*
+
  * Syncany, www.syncany.org
  * Copyright (C) 2011-2014 Philipp C. Heckel <philipp.heckel@gmail.com> 
  *
@@ -15,13 +16,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 //@Test
 // TODO [medium] Use @Test instead
 package org.syncany.connection.plugins.bt;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.util.ArrayList;
+
+import org.junit.Test;
 
 // TODO [medium] For tests, you can use the TestFileUtil methods to create test files
 
@@ -30,11 +34,14 @@ import java.util.ArrayList;
  *
  */
 public class TorrentCreatorTest {
-	public static void main(String[] args) {
+
+	@Test
+	public void testTorrentCreate() {
 		TorrentCreator t = new TorrentCreator();
 		ArrayList<File> files = new ArrayList<File>();
 		files.add(new File("torrentdata/Piece.class"));
 		files.add(new File("torrentdata/ttorrent-1.5-SNAPSHOT.jar"));
-		System.out.println(t.create("test-http.torrent", "http://kdserv.dyndns.org:6969/announce", files));
+		String infohash = new String(t.create("test-http.torrent", "http://kdserv.dyndns.org:6969/announce", files));
+		assertEquals("A3F936ED9AB32AAF4CEBA8B28A414BC0AB8FECC6", infohash);
 	}
 }

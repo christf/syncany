@@ -104,7 +104,6 @@ public class TestLeeching {
 		Client client;
 
 		SharedTorrent torrent = SharedTorrent.fromFile(new File("test-http.torrent"), new File("./download/"));
-
 		client = new Client(obtainInetAddress(), torrent);
 
 		try {
