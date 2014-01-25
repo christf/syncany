@@ -123,11 +123,9 @@ public class BtTransferManager extends AbstractTransferManager {
 						socket.bind(new InetSocketAddress(address, port));
 						socket.connect(new InetSocketAddress("google.com", 80));
 					}
-					catch (IOException ex) {
+					catch (IOException | UnresolvedAddressException ex) {
 						// even if there is an exception there might be a different interface which works => continue
 						continue;
-					} catch (UnresolvedAddressException ex) { 
-					continue;
 					}
 
 					String logmessage = new String();

@@ -113,7 +113,7 @@ public class TestSeeding {
 		final int maxseeding = 1;
 		Port seedingPort = new Port();
 		seedingPort.init();
-		seedingPort.map(6881, Port.protocol.TCP);
+		seedingPort.map(6881, Port.Protocol.TCP);
 		ArrayList<Client> clients = new ArrayList<Client>();
 		InetAddress address = obtainInetAddress();
 
