@@ -242,20 +242,19 @@ public class BtTransferManager extends AbstractTransferManager {
 		ArrayList<File> files = new ArrayList<File>();
 		files.add(localFile);
 		String torrentfile = new String(localFile.getAbsolutePath() + ".torrent");
-
-		String infohash = new String(torrentCreator.create(torrentfile, announceUrl, files));
-		logger.info("created torrent " + torrentfile + " having infohash " + infohash);
-
 		try {
+			String infohash = new String(torrentCreator.create(torrentfile, announceUrl, files));
+
+			logger.info("created torrent " + torrentfile + " having infohash " + infohash);
+
 			logger.log(Level.INFO, " - Uploading local file " + localFile + " to " + remoteURL + " ...");
 			InputStream localFileInputStream = new FileInputStream(torrentfile);
 
 			sardine.put(remoteURL, localFileInputStream, APPLICATION_CONTENT_TYPE);
 			localFileInputStream.close();
 		}
-		catch (Exception ex) {
-			logger.log(Level.SEVERE, "Error while uploading file to WebDAV: " + remoteURL, ex);
-			throw new StorageException(ex);
+		catch (Exception e) {
+			throw new StorageException("could not create torrent for files: " + files + "or could not upload metadata to webdav storage", e);
 		}
 	}
 
