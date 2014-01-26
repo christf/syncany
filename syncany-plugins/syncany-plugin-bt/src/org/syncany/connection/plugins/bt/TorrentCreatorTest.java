@@ -36,7 +36,7 @@ import org.junit.Test;
 public class TorrentCreatorTest {
 
 	@Test
-	public void testTorrentCreate() {
+	public void testTorrentCreate() throws Exception {
 		TorrentCreator t = new TorrentCreator();
 		ArrayList<File> files = new ArrayList<File>();
 		files.add(new File("torrentdata/Piece.class"));

@@ -31,7 +31,7 @@ import com.turn.ttorrent.common.Torrent;
 class TorrentCreator {
 	private static final Logger logger = Logger.getLogger(TorrentCreator.class.getSimpleName());
 
-	public String create(String torrentfile, String announceUrl, List<File> files) {
+	public String create(String torrentfile, String announceUrl, List<File> files) throws Exception {
 		return create(torrentfile, announceUrl, files, "", "", "torrent");
 	}
 
@@ -43,7 +43,8 @@ class TorrentCreator {
 			dataSize += file.length();
 		}
 
-		// a Torrent should have below 1500 pieces - adjust the pieceSize accordingly
+		// a Torrent should have below 1500 pieces at the same time the piece size should not be larger
+		// than 2MB - adjust the pieceSize accordingly
 		long sizeValue = dataSize / 1500 / 1024;
 
 		if (sizeValue < 32) {
@@ -58,56 +59,44 @@ class TorrentCreator {
 		else if (sizeValue < 512) {
 			pieceSize = 512;
 		}
-		else {
+		else if (sizeValue < 1024) {
 			pieceSize = 1024;
+		}
+		else {
+			pieceSize = 2048;
 		}
 
 		return pieceSize;
 	}
 
-	public String create(String torrentfile, String announceurl, List<File> files, String author, String comment, String name) {
+	public String create(String torrentfile, String announceurl, List<File> files, String author, String comment, String name) throws Exception {
 		return create(torrentfile, announceurl, files, "", "", "torrent", calcpiecesize(files));
 	}
 
-	public String create(String torrentfile, String announceurl, List<File> files, String author, String comment, String name, int piecesize) {
+	public String create(String torrentfile, String announceurl, List<File> files, String author, String comment, String name, int piecesize)
+			throws Exception {
 		TorrentProcessor torrentProcessor = new TorrentProcessor();
 		torrentProcessor.setAnnounceURL(announceurl);
 
 		torrentProcessor.setName(name);
 		torrentProcessor.setPieceLength(piecesize);
 		String infohash = null;
-		try {
-			torrentProcessor.addFiles(files);
-		}
-		catch (Exception e) {
-			logger.log(Level.SEVERE, "Problem when adding files to torrent:", files.toString());
-			// TODO [major] - throw a real exception here
-			System.exit(1);
-		}
+		torrentProcessor.addFiles(files);
 
 		torrentProcessor.setCreator(author);
 		torrentProcessor.setComment(comment);
 
-		try {
-			logger.log(Level.INFO, "Hashing the files...");
-			torrentProcessor.generatePieceHashes();
-			logger.log(Level.INFO, "Hash complete. Saving torrent data to file: " + torrentfile);
-			FileOutputStream fos = new FileOutputStream(torrentfile);
-			fos.write(torrentProcessor.generateTorrent());
-			fos.close();
+		logger.log(Level.INFO, "Hashing the files...");
+		torrentProcessor.generatePieceHashes();
+		logger.log(Level.INFO, "Hash complete. Saving torrent data to file: " + torrentfile);
+		FileOutputStream fos = new FileOutputStream(torrentfile);
+		fos.write(torrentProcessor.generateTorrent());
+		fos.close();
 
-			Torrent torrent = Torrent.load(new File(torrentfile));
-			infohash = torrent.getHexInfoHash();
+		Torrent torrent = Torrent.load(new File(torrentfile));
+		infohash = torrent.getHexInfoHash();
 
-			logger.log(Level.INFO, "Torrent " + torrentfile + " created successfully.");
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-			logger.log(Level.SEVERE, "Error when writing to the torrent file: " + torrentfile);
-			// TODO - major - throw a real exception here
-			System.exit(1);
-		}
+		logger.log(Level.INFO, "Torrent " + torrentfile + " created successfully.");
 		return infohash;
 	}
-
 }
