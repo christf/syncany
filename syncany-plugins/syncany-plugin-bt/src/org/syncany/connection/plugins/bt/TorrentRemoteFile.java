@@ -1,6 +1,7 @@
 /*
+/*
  * Syncany, www.syncany.org
- * Copyright (C) 2011-2014 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,10 +18,75 @@
  */
 package org.syncany.connection.plugins.bt;
 
-/**
- * @author christof
- *
- */
-public class TorrentRemoteFile {
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.syncany.connection.plugins.RemoteFile;
+import org.syncany.connection.plugins.StorageException;
+import org.syncany.util.StringUtil;
+
+/**
+ * The Torrent file represents a Torrent on the remote storage. 
+ * 
+ * <p><b>Name pattern:</b> The name pattern of a  file is
+ * <b>multichunk-&lt;multichunkid&gt;.torrent</b>. Initializing an 
+ * instance with a non-matching name will throw an exception.
+ * 
+ * @author Christof Schulze <christof.schulze@gmx.net>
+ */
+public class TorrentRemoteFile extends RemoteFile {
+	private static final Pattern NAME_PATTERN = Pattern.compile("multichunk-([a-f0-9]+)");
+	private static final String NAME_FORMAT = "multichunk-%s.torrent";
+
+	private byte[] multiChunkId;
+
+	/**
+	 * Initializes a new multichunk file, given a name. This constructor might 
+	 * be called by the {@link RemoteFileFactory#createRemoteFile(String, Class) createRemoteFile()}
+	 * method of the {@link RemoteFileFactory}. 
+	 * 
+	 * <p>If the pattern matches, the multichunk identifier is set and can be  
+	 * queried by {@link #getMultiChunkId()}.
+	 *  
+	 * @param name Multichunk file name; <b>must</b> always match the {@link #NAME_PATTERN} 
+	 * @throws StorageException If the name is not match the name pattern
+	 */
+	public TorrentRemoteFile(String name) throws StorageException {
+		super(name);
+	}
+
+	/**
+	 * Initializes a new multichunk file, given a multichunk identifier
+	 *  
+	 * @param multiChunkId The identifier of the multichunk
+	 * @throws StorageException Never throws an exception
+	 */
+	public TorrentRemoteFile(byte[] multiChunkId) throws StorageException {
+		super(String.format(NAME_FORMAT, StringUtil.toHex(multiChunkId)));
+	}
+
+	/**
+	 * Returns the multichunk identifier
+	 */
+	public byte[] getMultiChunkId() {
+		return multiChunkId;
+	}
+
+	@Override
+	protected String validateName(String name) throws StorageException {
+		Matcher matcher = NAME_PATTERN.matcher(name);
+
+		if (!matcher.matches()) {
+			throw new StorageException(name + ": remote filename pattern does not match: " + NAME_PATTERN.pattern() + " expected.");
+		}
+
+		try {
+			multiChunkId = StringUtil.fromHex(matcher.group(1));
+		}
+		catch (Exception e) {
+			throw new StorageException(name + ": remote filename pattern does not match (invalid hex): " + NAME_PATTERN.pattern() + " expected.");
+		}
+
+		return name;
+	}
 }

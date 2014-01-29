@@ -30,7 +30,6 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.concurrent.TimeUnit;
 
-import com.turn.ttorrent.client.Client;
 import com.turn.ttorrent.client.Client.ClientState;
 import com.turn.ttorrent.client.SharedTorrent;
 
@@ -101,10 +100,10 @@ public class TestLeeching {
 
 	public static void main(String[] args) throws Exception {
 
-		Client client;
+		QueueingClient client;
 
 		SharedTorrent torrent = SharedTorrent.fromFile(new File("test-http.torrent"), new File("./download/"));
-		client = new Client(obtainInetAddress(), torrent);
+		client = new QueueingClient(obtainInetAddress(), torrent, 50678);
 
 		try {
 			System.out.println("Start to download: " + torrent.getName());

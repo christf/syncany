@@ -37,7 +37,6 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.SAXException;
 
-import com.turn.ttorrent.client.Client;
 import com.turn.ttorrent.client.Client.ClientState;
 import com.turn.ttorrent.client.SharedTorrent;
 import com.turn.ttorrent.client.peer.SharingPeer;
@@ -111,10 +110,11 @@ public class TestSeeding {
 
 	public static void main(String[] args) throws IOException, InterruptedException, SAXException, ParserConfigurationException {
 		final int maxseeding = 1;
+		int port = 43534;
 		Port seedingPort = new Port();
 		seedingPort.init();
-		seedingPort.map(6881, Port.Protocol.TCP);
-		ArrayList<Client> clients = new ArrayList<Client>();
+		seedingPort.map(port, Port.Protocol.TCP);
+		ArrayList<QueueingClient> clients = new ArrayList<QueueingClient>();
 		InetAddress address = obtainInetAddress();
 
 		File torrentdir = new File("./torrents");
@@ -123,7 +123,7 @@ public class TestSeeding {
 		for (File torrent : torrentdir.listFiles()) {
 			File destination = new File("./torrentdata/");
 			destination.mkdirs();
-			Client client = new Client(address, SharedTorrent.fromFile(torrent, destination));
+			QueueingClient client = new QueueingClient(address, SharedTorrent.fromFile(torrent, destination), port);
 			client.share();
 			currentlyseeding++;
 			clients.add(client);
@@ -131,7 +131,7 @@ public class TestSeeding {
 
 		int t = 0;
 		while (t < 100) {
-			for (Client client : clients) {
+			for (QueueingClient client : clients) {
 				// System.out.println(client.getTorrent().getName() + " " + client.getState());
 				// client.info();
 				logger.info(client.getState().toString());

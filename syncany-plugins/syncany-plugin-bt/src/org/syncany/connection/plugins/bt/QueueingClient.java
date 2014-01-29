@@ -31,6 +31,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.BitSet;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Observable;
@@ -188,11 +189,28 @@ public class QueueingClient extends Observable implements Runnable, AnnounceResp
 	 * @param state
 	 *            The new client state.
 	 */
+	Date lastchange;
+	double seedingscore;
+
+	private void updateseedingscore(int complete, int incomplete) {
+		if (incomplete == 0) {
+			this.seedingscore = 0;
+		}
+		else if (complete / incomplete > 5) {
+			this.seedingscore = 0;
+		}
+		else {
+			this.seedingscore = incomplete / complete;
+		}
+	}
+
 	private synchronized void setState(ClientState state) {
 		if (this.state != state) {
 			this.setChanged();
 		}
 		this.state = state;
+		this.lastchange = new Date();
+
 		this.notifyObservers(this.state);
 	}
 
@@ -633,6 +651,7 @@ public class QueueingClient extends Observable implements Runnable, AnnounceResp
 	 */
 	@Override
 	public void handleAnnounceResponse(int interval, int complete, int incomplete) {
+		updateseedingscore(complete, incomplete);
 		this.announce.setInterval(interval);
 	}
 

@@ -30,6 +30,10 @@ import java.net.SocketException;
 import java.net.URI;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.UnresolvedAddressException;
+import java.nio.file.CopyOption;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -53,9 +57,7 @@ import com.github.sardine.SardineFactory;
 import com.github.sardine.impl.SardineImpl;
 import com.turn.ttorrent.client.Client;
 import com.turn.ttorrent.client.SharedTorrent;
-
 // TODO [medium] use torrent library that supports DHT
-// TODO [medium] use upnp to enable seeding behind a firewall
 // FIXME [low] According to the documentation ttorrent only supports downloading single-file-torrents. Hence a multichunk corresponds to one torrent which is not memory-efficient
 
 public class BtTransferManager extends AbstractTransferManager {
@@ -65,11 +67,15 @@ public class BtTransferManager extends AbstractTransferManager {
 	private static final String announceUrl = "http://kdserv.dyndns.org:6969/announce";
 
 	private Sardine sardine;
-	private ArrayList<SeedEntry> slist;
+	private ArrayList<SeedEntry> seedList;
 
+	private final String btCache = ".syncany/btcache";
+	private final String btDataDir = btCache + File.pathSeparator + "data";
+	private final String btTorrentDir = btCache + File.pathSeparator + "torrents";
 	private String repoPath;
 	private String multichunkPath;
 	private String databasePath;
+	private String torrentPath;
 	private InetAddress inetaddress;
 
 	public BtTransferManager(BtConnection connection) {
@@ -78,6 +84,7 @@ public class BtTransferManager extends AbstractTransferManager {
 		this.repoPath = connection.getUrl().replaceAll("/$", "");
 		this.multichunkPath = connection.getUrl() + "/multichunks";
 		this.databasePath = connection.getUrl() + "/databases";
+		this.torrentPath = connection.getUrl() + "/torrents";
 	}
 
 	@Override
@@ -85,64 +92,62 @@ public class BtTransferManager extends AbstractTransferManager {
 		return (BtConnection) super.getConnection();
 	}
 
-	// TODO [feature] enable IPv6
-	private InetAddress obtainInetAddress() {
+	// TODO [feature] Allow to configure the interface using the configuration of syncany
+	private InetAddress obtainInetAddress() throws SocketException {
 		Enumeration<NetworkInterface> interfaces;
 
-		try {
-			interfaces = NetworkInterface.getNetworkInterfaces();
+		interfaces = NetworkInterface.getNetworkInterfaces();
 
-			for (NetworkInterface interface_ : Collections.list(interfaces)) {
-				if (interface_.isLoopback()) {
+		for (NetworkInterface interface_ : Collections.list(interfaces)) {
+			if (interface_.isLoopback()) {
+				continue;
+			}
+			if (!interface_.isUp()) {
+				continue;
+			}
+
+			Enumeration<InetAddress> addresses = interface_.getInetAddresses();
+			for (InetAddress address : Collections.list(addresses)) {
+				// look only for ipv4 addresses
+				if (address instanceof Inet6Address) {
 					continue;
 				}
-				if (!interface_.isUp()) {
-					continue;
-				}
 
-				Enumeration<InetAddress> addresses = interface_.getInetAddresses();
-				for (InetAddress address : Collections.list(addresses)) {
-					// look only for ipv4 addresses
-					if (address instanceof Inet6Address) {
+				try {
+					if (!address.isReachable(3000))
 						continue;
-					}
+				}
+				catch (IOException e) {
+					continue;
+				}
 
-					try {
-						if (!address.isReachable(3000))
+				try (SocketChannel socket = SocketChannel.open()) {
+					socket.socket().setSoTimeout(3000);
+
+					int startPort = (int) (Math.random() * 64495 + 1024);
+					for (int port = startPort; port < startPort + 15; port++) {
+						try {
+							socket.bind(new InetSocketAddress(address, port));
+							break;
+						}
+						catch (IOException e) {
 							continue;
+						}
 					}
-					catch (IOException e) {
-						continue;
-					}
-
-					try (SocketChannel socket = SocketChannel.open()) {
-						socket.socket().setSoTimeout(3000);
-
-						// TODO [medium] make sure that this random port is not already in use on that interface
-						int port = (int) (Math.random() * 64510 + 1024);
-						socket.bind(new InetSocketAddress(address, port));
-						socket.connect(new InetSocketAddress("google.com", 80));
-					}
-					catch (IOException | UnresolvedAddressException ex) {
-						// even if there is an exception there might be a different interface which works => continue
-						continue;
-					}
-
-					String logmessage = new String();
-					logmessage = String.format("using interface: %s, ia: %s\n", interface_, address);
-					logger.info(logmessage);
-					return interface_.getInetAddresses().nextElement();
+					socket.connect(new InetSocketAddress("google.com", 80));
 				}
+				catch (IOException | UnresolvedAddressException ex) {
+					// even if there is an exception there might be a different interface which works => continue
+					continue;
+				}
+
+				String logmessage = new String();
+				logmessage = String.format("using interface: %s, ia: %s\n", interface_, address);
+				logger.info(logmessage);
+				return address;
 			}
 		}
-		catch (SocketException e1) {
-			// no network interfaces found
-			e1.printStackTrace();
-		}
-
 		logger.severe("could not find a suitable network interface to use");
-		// TODO [high] get rid of System.exit
-		System.exit(1);
 		return null;
 	}
 
@@ -166,7 +171,12 @@ public class BtTransferManager extends AbstractTransferManager {
 			}
 		}
 
-		inetaddress = obtainInetAddress();
+		try {
+			this.inetaddress = obtainInetAddress();
+		}
+		catch (SocketException e) {
+			throw new StorageException("could not find a suitable IP-Address to bind", e);
+		}
 
 		// TODO [high] initialize the seeding queue and start at least some clients.
 	}
@@ -190,6 +200,8 @@ public class BtTransferManager extends AbstractTransferManager {
 			logger.log(Level.SEVERE, "Cannot initialize WebDAV folder.", e);
 			throw new StorageException(e);
 		}
+		File btcache = new File(this.btCache);
+		btcache.mkdir();
 	}
 
 	private File getTorrentForRemoteFile(RemoteFile remoteFile) {
@@ -237,18 +249,21 @@ public class BtTransferManager extends AbstractTransferManager {
 	public void upload(File localFile, RemoteFile remoteFile) throws StorageException {
 		connect();
 		String remoteURL = getRemoteFileUrl(remoteFile);
+		CopyOption[] options = new CopyOption[] { StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES };
 
 		TorrentCreator torrentCreator = new TorrentCreator();
 		ArrayList<File> files = new ArrayList<File>();
-		files.add(localFile);
-		String torrentfile = new String(localFile.getAbsolutePath() + ".torrent");
+
+		String torrentFile = new String(btTorrentDir + File.pathSeparator + localFile.getName() + ".torrent");
 		try {
-			String infohash = new String(torrentCreator.create(torrentfile, announceUrl, files));
+			Files.copy(localFile.toPath(), Paths.get(btDataDir + File.pathSeparator + localFile.getName()), options[0]);
+			files.add(new File(btDataDir + File.pathSeparator + localFile.getName()));
+			String infohash = new String(torrentCreator.create(torrentFile, announceUrl, files));
 
-			logger.info("created torrent " + torrentfile + " having infohash " + infohash);
+			logger.info("created torrent " + torrentFile + " having infohash " + infohash);
 
-			logger.log(Level.INFO, " - Uploading local file " + localFile + " to " + remoteURL + " ...");
-			InputStream localFileInputStream = new FileInputStream(torrentfile);
+			logger.log(Level.INFO, " - Uploading local file " + torrentFile + " to " + remoteURL + " ...");
+			InputStream localFileInputStream = new FileInputStream(torrentFile);
 
 			sardine.put(remoteURL, localFileInputStream, APPLICATION_CONTENT_TYPE);
 			localFileInputStream.close();
@@ -256,6 +271,7 @@ public class BtTransferManager extends AbstractTransferManager {
 		catch (Exception e) {
 			throw new StorageException("could not create torrent for files: " + files + "or could not upload metadata to webdav storage", e);
 		}
+		// TODO add this torrent to seeding queue.
 	}
 
 	@Override
@@ -337,6 +353,9 @@ public class BtTransferManager extends AbstractTransferManager {
 		}
 		else if (remoteFile.equals(DatabaseRemoteFile.class)) {
 			return databasePath;
+		}
+		else if (remoteFile.equals(TorrentRemoteFile.class)) {
+			return torrentPath;
 		}
 		else {
 			return repoPath;
