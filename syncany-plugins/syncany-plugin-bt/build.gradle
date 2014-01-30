@@ -1,0 +1,10 @@
+dependencies {
+    compile files(fileTree(dir: 'lib', includes: ['*.jar']))
+    compile                    project(':syncany-lib')
+      compile                 "com.github.lookfirst:sardine:5.0.1"
+    //  compile                 "com.turn:ttorrent:1.4"          
+    testCompile     "junit:junit:4.3"
+      testCompile     project(path : ':syncany-lib', configuration: 'tests')
+
+}
+

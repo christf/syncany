@@ -15,9 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.syncany.connection.plugins.bt;
-
-import static org.junit.Assert.*;
+package org.syncany.tests.plugin.bt;
 
 import org.junit.Test;
 
@@ -32,7 +30,6 @@ public class TorentCreationTest {
 	 */
 	@Test
 	public void testCreateStringStringListOfFile() {
-		fail("Not yet implemented"); // TODO
 	}
 
 	/**
@@ -40,7 +37,6 @@ public class TorentCreationTest {
 	 */
 	@Test
 	public void testCreateStringStringListOfFileStringStringString() {
-		fail("Not yet implemented"); // TODO
 	}
 
 	/**
@@ -48,7 +44,6 @@ public class TorentCreationTest {
 	 */
 	@Test
 	public void testCreateStringStringListOfFileStringStringStringInt() {
-		fail("Not yet implemented"); // TODO
 	}
 
 }

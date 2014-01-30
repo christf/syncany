@@ -18,21 +18,32 @@
 
 package org.syncany.connection.plugins.bt;
 
-import jBittorrentAPI.TorrentProcessor;
-
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.apache.commons.io.IOUtils;
 
 import com.turn.ttorrent.common.Torrent;
 
 class TorrentCreator {
 	private static final Logger logger = Logger.getLogger(TorrentCreator.class.getSimpleName());
 
-	public String create(String torrentfile, String announceUrl, List<File> files) throws Exception {
-		return create(torrentfile, announceUrl, files, "", "", "torrent");
+	/**
+	 * 
+	 */
+	public TorrentCreator() {
+		// TODO Auto-generated constructor stub
+	}
+
+	public String create(String torrentFile, String announceUrl, List<File> files) throws Exception {
+		return create(torrentFile, announceUrl, files, "", "", "torrent");
 	}
 
 	private int calcpiecesize(List<File> files) {
@@ -69,34 +80,29 @@ class TorrentCreator {
 		return pieceSize;
 	}
 
-	public String create(String torrentfile, String announceurl, List<File> files, String author, String comment, String name) throws Exception {
-		return create(torrentfile, announceurl, files, "", "", "torrent", calcpiecesize(files));
+	public String create(String torrentFile, String announceurl, List<File> files, String author, String comment, String name) throws Exception {
+		return create(torrentFile, announceurl, files, "", "", "torrent", calcpiecesize(files));
 	}
 
-	public String create(String torrentfile, String announceurl, List<File> files, String author, String comment, String name, int piecesize)
-			throws Exception {
-		TorrentProcessor torrentProcessor = new TorrentProcessor();
-		torrentProcessor.setAnnounceURL(announceurl);
+	public String create(String torrentFile, String announceURL, List<File> files, String author, String comment, String name, int piecesize)
+			throws URISyntaxException, InterruptedException, IOException {
 
-		torrentProcessor.setName(name);
-		torrentProcessor.setPieceLength(piecesize);
-		String infohash = null;
-		torrentProcessor.addFiles(files);
+		String infohash;
 
-		torrentProcessor.setCreator(author);
-		torrentProcessor.setComment(comment);
+		OutputStream fos = null;
+		fos = new FileOutputStream(torrentFile);
 
-		logger.log(Level.INFO, "Hashing the files...");
-		torrentProcessor.generatePieceHashes();
-		logger.log(Level.INFO, "Hash complete. Saving torrent data to file: " + torrentfile);
-		FileOutputStream fos = new FileOutputStream(torrentfile);
-		fos.write(torrentProcessor.generateTorrent());
-		fos.close();
+		URI announceURI = new URI(announceURL);
+		String creator = String.format("%s (ttorrent)", System.getProperty("user.name"));
 
-		Torrent torrent = Torrent.load(new File(torrentfile));
-		infohash = torrent.getHexInfoHash();
+		Torrent torrent = null;
+		torrent = Torrent.create(files.get(0).getParentFile(), files, announceURI, creator);
+		// torrent = Torrent.create(source, announceURI, creator);
+		infohash = new String(torrent.getHexInfoHash());
+		torrent.save(fos);
+		IOUtils.closeQuietly(fos);
 
-		logger.log(Level.INFO, "Torrent " + torrentfile + " created successfully.");
+		logger.log(Level.INFO, "Torrent " + torrentFile + " created successfully.");
 		return infohash;
 	}
 }
