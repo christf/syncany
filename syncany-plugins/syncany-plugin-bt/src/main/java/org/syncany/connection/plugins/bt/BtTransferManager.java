@@ -70,21 +70,19 @@ public class BtTransferManager extends AbstractTransferManager {
 	private ArrayList<SeedEntry> seedList;
 
 	private final String btCache = ".syncany/btcache";
-	private final String btDataDir = btCache + File.pathSeparator + "data";
-	private final String btTorrentDir = btCache + File.pathSeparator + "torrents";
+	private final String btDataDir = btCache + File.separator + "data";
+	private final String btTorrentDir = btCache + File.separator + "torrents";
 	private String repoPath;
 	private String multichunkPath;
 	private String databasePath;
-	private String torrentPath;
 	private InetAddress inetaddress;
 
 	public BtTransferManager(BtConnection connection) {
 		super(connection);
 
 		this.repoPath = connection.getUrl().replaceAll("/$", "");
-		this.multichunkPath = connection.getUrl() + "/multichunks";
+		this.multichunkPath = connection.getUrl() + "/torrents";
 		this.databasePath = connection.getUrl() + "/databases";
-		this.torrentPath = connection.getUrl() + "/torrents";
 	}
 
 	@Override
@@ -200,14 +198,13 @@ public class BtTransferManager extends AbstractTransferManager {
 			logger.log(Level.SEVERE, "Cannot initialize WebDAV folder.", e);
 			throw new StorageException(e);
 		}
-		File btcache = new File(this.btCache);
-		btcache.mkdir();
-	}
-
-	private File getTorrentForRemoteFile(RemoteFile remoteFile) {
-		File torrentFile = null;
-
-		return torrentFile;
+		File mkDir = new File(this.btCache);
+		mkDir.mkdir();
+		mkDir = new File(this.btDataDir);
+		mkDir.mkdir();
+		mkDir = new File(this.btTorrentDir);
+		mkDir.mkdir();
+		mkDir = null;
 	}
 
 	@Override
@@ -245,25 +242,45 @@ public class BtTransferManager extends AbstractTransferManager {
 		}
 	}
 
+	private boolean isMultiChunkFile(File localFile) {
+		if (localFile.getName().toString().startsWith("multichunk")) {
+			return true;
+		}
+		return false;
+	}
+
 	@Override
 	public void upload(File localFile, RemoteFile remoteFile) throws StorageException {
 		connect();
-		String remoteURL = getRemoteFileUrl(remoteFile);
-		CopyOption[] options = new CopyOption[] { StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES };
 
-		TorrentCreator torrentCreator = new TorrentCreator();
+		System.out.println("local file: " + localFile.getPath() + File.separator + localFile.getName());
+
+		String remoteURL = getRemoteFileUrl(remoteFile);
+		File uploadFile = localFile;
+
 		ArrayList<File> files = new ArrayList<File>();
 
-		String torrentFile = new String(btTorrentDir + File.pathSeparator + localFile.getName() + ".torrent");
+		if (isMultiChunkFile(localFile)) {
+
+			CopyOption[] options = new CopyOption[] { StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES };
+			TorrentCreator torrentCreator = new TorrentCreator();
+
+			String torrentFile = new String(btTorrentDir + File.separator + localFile.getName() + ".torrent");
+			try {
+				Files.copy(localFile.toPath(), Paths.get(btDataDir + File.separator + localFile.getName()), options[0]);
+				files.add(new File(btDataDir + File.separator + localFile.getName()));
+				String infohash = new String(torrentCreator.create(torrentFile, announceUrl, files));
+				logger.info("created torrent " + torrentFile + " having infohash " + infohash);
+			}
+			catch (Exception e) {
+				throw new StorageException(e);
+			}
+			uploadFile = new File(torrentFile);
+			// TODO: cheat the torrent directory into the URL.
+		}
 		try {
-			Files.copy(localFile.toPath(), Paths.get(btDataDir + File.pathSeparator + localFile.getName()), options[0]);
-			files.add(new File(btDataDir + File.pathSeparator + localFile.getName()));
-			String infohash = new String(torrentCreator.create(torrentFile, announceUrl, files));
-
-			logger.info("created torrent " + torrentFile + " having infohash " + infohash);
-
-			logger.log(Level.INFO, " - Uploading local file " + torrentFile + " to " + remoteURL + " ...");
-			InputStream localFileInputStream = new FileInputStream(torrentFile);
+			logger.log(Level.INFO, " - Uploading local file " + uploadFile.getName() + " to " + remoteURL + " ...");
+			InputStream localFileInputStream = new FileInputStream(uploadFile);
 
 			sardine.put(remoteURL, localFileInputStream, APPLICATION_CONTENT_TYPE);
 			localFileInputStream.close();
@@ -353,9 +370,6 @@ public class BtTransferManager extends AbstractTransferManager {
 		}
 		else if (remoteFile.equals(DatabaseRemoteFile.class)) {
 			return databasePath;
-		}
-		else if (remoteFile.equals(TorrentRemoteFile.class)) {
-			return torrentPath;
 		}
 		else {
 			return repoPath;
