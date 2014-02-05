@@ -151,6 +151,14 @@ public class BtTransferManager extends AbstractTransferManager {
 
 	@Override
 	public void connect() throws StorageException {
+		File mkDir = new File(this.btCache);
+		mkDir.mkdir();
+		mkDir = new File(this.btDataDir);
+		mkDir.mkdir();
+		mkDir = new File(this.btTorrentDir);
+		mkDir.mkdir();
+		mkDir = null;
+
 		if (sardine == null) {
 			if (getConnection().isSecure()) {
 				final SSLSocketFactory sslSocketFactory = getConnection().getSslSocketFactory();
@@ -214,26 +222,28 @@ public class BtTransferManager extends AbstractTransferManager {
 		try {
 			Client client;
 
-			// download .torrent-file to local storage
 			String remoteURL = getRemoteFileUrl(remoteFile);
 
-			// Download file
+			logger.log(Level.INFO, " - Downloading " + remoteURL + " to temp file " + localFile + " ...");
+			InputStream webdavFileInputStream = sardine.get(remoteURL);
+
+			FileUtil.writeToFile(webdavFileInputStream, localFile);
+			webdavFileInputStream.close();
+
 			if (isMultiChunkRemoteFile(remoteFile.getClass())) {
-				logger.log(Level.INFO, " - Downloading " + remoteURL + ".torrent to temp file " + localFile + " ...");
-				InputStream webdavFileInputStream = sardine.get(remoteURL + ".torrent");
-
-				FileUtil.writeToFile(webdavFileInputStream, localFile);
-				webdavFileInputStream.close();
-
-				client = new Client(inetaddress,
-				// TODO [high] Load the torrent from the torrent file and use the given
-				// output directory. Partials downloads are automatically recovered.
-						SharedTorrent.fromFile(new File("/path/to/your.torrent"), localFile));
+				// we did not download the data but the torrent file. Correct the paths
+				CopyOption[] options = new CopyOption[] { StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES };
+				String localTorrentFile = new String();
+				localTorrentFile = btTorrentDir + File.separator + localFile.getName() + ".torrent";
+				Files.move(localFile.toPath(), Paths.get(localTorrentFile), options[0]);
+				client = new Client(inetaddress, SharedTorrent.fromFile(new File(localTorrentFile), localFile.getParentFile()));
 				client.download();
 				client.waitForCompletion();
+				Files.copy(localFile.toPath(), Paths.get(btDataDir + File.separator + localFile.getName()), options[0]);
+				// TODO - share this torrent
 			}
 			else if (isDataBaseRemoteFile(remoteFile.getClass())) {
-
+				// nothing to do
 			}
 		}
 		catch (IOException ex) {
@@ -276,7 +286,6 @@ public class BtTransferManager extends AbstractTransferManager {
 				throw new StorageException(e);
 			}
 			uploadFile = new File(torrentFile);
-			// TODO: cheat the torrent directory into the URL.
 		}
 		try {
 			logger.log(Level.INFO, " - Uploading local file " + uploadFile.getName() + " to " + remoteURL + " ...");
