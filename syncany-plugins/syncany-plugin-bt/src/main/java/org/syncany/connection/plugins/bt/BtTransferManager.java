@@ -57,8 +57,8 @@ import com.github.sardine.SardineFactory;
 import com.github.sardine.impl.SardineImpl;
 import com.turn.ttorrent.client.Client;
 import com.turn.ttorrent.client.SharedTorrent;
+
 // TODO [medium] use torrent library that supports DHT
-// FIXME [low] According to the documentation ttorrent only supports downloading single-file-torrents. Hence a multichunk corresponds to one torrent which is not memory-efficient
 
 public class BtTransferManager extends AbstractTransferManager {
 	private static final String APPLICATION_CONTENT_TYPE = "application/x-syncany";
@@ -279,7 +279,8 @@ public class BtTransferManager extends AbstractTransferManager {
 			try {
 				Files.copy(localFile.toPath(), Paths.get(btDataDir + File.separator + localFile.getName()), options[0]);
 				files.add(new File(btDataDir + File.separator + localFile.getName()));
-				String infohash = new String(torrentCreator.create(torrentFile, announceUrl, files));
+				String infohash = new String(torrentCreator.create(torrentFile, announceUrl,
+						new File(btDataDir + File.separator + localFile.getName())));
 				logger.info("created torrent " + torrentFile + " having infohash " + infohash);
 			}
 			catch (Exception e) {

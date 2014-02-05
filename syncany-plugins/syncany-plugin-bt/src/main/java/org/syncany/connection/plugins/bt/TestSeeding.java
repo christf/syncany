@@ -48,68 +48,67 @@ import com.turn.ttorrent.client.peer.SharingPeer;
 public class TestSeeding {
 	private static final Logger logger = Logger.getLogger(TestSeeding.class.getSimpleName());
 
-	private static InetAddress obtainInetAddress() {
+	// TODO [feature] Allow to configure the interface using the configuration of syncany
+	private static InetAddress obtainInetAddress() throws SocketException {
 		Enumeration<NetworkInterface> interfaces;
 
-		try {
-			interfaces = NetworkInterface.getNetworkInterfaces();
+		interfaces = NetworkInterface.getNetworkInterfaces();
 
-			for (NetworkInterface interface_ : Collections.list(interfaces)) {
-				if (interface_.isLoopback()) {
+		for (NetworkInterface interface_ : Collections.list(interfaces)) {
+			if (interface_.isLoopback()) {
+				continue;
+			}
+			if (!interface_.isUp()) {
+				continue;
+			}
+
+			Enumeration<InetAddress> addresses = interface_.getInetAddresses();
+			for (InetAddress address : Collections.list(addresses)) {
+				// look only for ipv4 addresses
+				if (address instanceof Inet6Address) {
 					continue;
 				}
-				if (!interface_.isUp()) {
-					continue;
-				}
 
-				Enumeration<InetAddress> addresses = interface_.getInetAddresses();
-				for (InetAddress address : Collections.list(addresses)) {
-					// TODO [feature] at some point in time also allow IPv6
-					if (address instanceof Inet6Address) {
+				try {
+					if (!address.isReachable(3000))
 						continue;
-					}
+				}
+				catch (IOException e) {
+					continue;
+				}
 
-					try {
-						if (!address.isReachable(3000))
+				try (SocketChannel socket = SocketChannel.open()) {
+					socket.socket().setSoTimeout(3000);
+
+					int startPort = (int) (Math.random() * 64495 + 1024);
+					for (int port = startPort; port < startPort + 15; port++) {
+						try {
+							socket.bind(new InetSocketAddress(address, port));
+							break;
+						}
+						catch (IOException e) {
 							continue;
+						}
 					}
-					catch (IOException e) {
-						continue;
-					}
-
-					try (SocketChannel socket = SocketChannel.open()) {
-						socket.socket().setSoTimeout(3000);
-
-						// TODO [medium] make sure that this random port is not already in use on that interface
-						int port = (int) (Math.random() * 64510 + 1024);
-						socket.bind(new InetSocketAddress(address, port));
-						socket.connect(new InetSocketAddress("google.com", 80));
-					}
-					catch (IOException | UnresolvedAddressException ex) {
-						// even if there is an exception there might be a different interface which works => continue
-						continue;
-					}
-
-					String logmessage = new String();
-					logmessage = String.format("using interface: %s, ia: %s\n", interface_, address);
-					logger.info(logmessage);
-					return address;
+					socket.connect(new InetSocketAddress("google.com", 80));
 				}
+				catch (IOException | UnresolvedAddressException ex) {
+					// even if there is an exception there might be a different interface which works => continue
+					continue;
+				}
+
+				String logmessage = new String();
+				logmessage = String.format("using interface: %s, ia: %s\n", interface_, address);
+				logger.info(logmessage);
+				return address;
 			}
 		}
-		catch (SocketException e1) {
-			// no network interfaces found
-			e1.printStackTrace();
-		}
-
 		logger.severe("could not find a suitable network interface to use");
-		// TODO [high] get rid of System.exit
-		System.exit(1);
 		return null;
 	}
 
 	public static void main(String[] args) throws IOException, InterruptedException, SAXException, ParserConfigurationException {
-		final int maxseeding = 1;
+		final int maxseeding = 10;
 		int port = 43534;
 		Port seedingPort = new Port();
 		seedingPort.init();
@@ -117,15 +116,14 @@ public class TestSeeding {
 		ArrayList<QueueingClient> clients = new ArrayList<QueueingClient>();
 		InetAddress address = obtainInetAddress();
 
-		File torrentdir = new File("./torrents");
+		File torrentdir = new File("/home/christof/nobackup/syncany-testbed/a/.syncany/btcache/torrents");
 		int currentlyseeding = 0;
 
 		for (File torrent : torrentdir.listFiles()) {
-			File destination = new File("./torrentdata/");
+			File destination = new File("/home/christof/nobackup/syncany-testbed/a/.syncany/btcache");
 			destination.mkdirs();
+			System.out.println(port);
 			QueueingClient client = new QueueingClient(address, SharedTorrent.fromFile(torrent, destination), port);
-			client.share();
-			currentlyseeding++;
 			clients.add(client);
 		}
 
@@ -136,19 +134,19 @@ public class TestSeeding {
 				// client.info();
 				logger.info(client.getState().toString());
 
-				if (ClientState.WAITING.equals(client.getState())) {
+				if (ClientState.WAITING.toString().equals(client.getState().toString())) {
 					if (currentlyseeding < maxseeding) {
 						client.share();
 						currentlyseeding++;
 					}
 				}
-				else if (ClientState.DONE.equals(client.getState())) {
+				else if (ClientState.DONE.toString().equals(client.getState().toString())) {
 					if (currentlyseeding < maxseeding) {
 						client.share();
 						currentlyseeding++;
 					}
 				}
-				else if (ClientState.SEEDING.equals(client.getState())) {
+				else if (ClientState.SEEDING.toString().equals(client.getState().toString())) {
 					Set<SharingPeer> sharingPeers = client.getPeers();
 					int numberOfInterested = 0;
 					for (SharingPeer sharingPeer : sharingPeers) {
@@ -156,20 +154,20 @@ public class TestSeeding {
 							numberOfInterested++;
 						}
 					}
-					logger.info(Integer.toString(numberOfInterested));
-					if (numberOfInterested == 0 && currentlyseeding > maxseeding) {
-						// client.stop(true);
-						// currentlyseeding--;
+					logger.info(client.getTorrent().getName() + " has " + Integer.toString(numberOfInterested) + " interested peers");
+					if (numberOfInterested == 0 && currentlyseeding >= maxseeding) {
+						client.stop(true);
+						currentlyseeding--;
 					}
 				}
-				else if (ClientState.ERROR.equals(client.getState())) {
+				else if (ClientState.ERROR.toString().equals(client.getState().toString())) {
 					System.err.println("client error state found");
 				}
-				else if (ClientState.SHARING.equals(client.getState())) {
-					System.err.println("client is still downloading - why is that? it should be finished if it is in this queue");
+				else if (ClientState.SHARING.toString().equals(client.getState().toString())) {
+					System.err.println("BUG DETECTED - client is still downloading - why is that? it should be finished if it is in this queue");
 				}
-				else if (ClientState.VALIDATING.equals(client.getState())) {
-					System.err.println("client is validating");
+				else if (ClientState.VALIDATING.toString().equals(client.getState().toString())) {
+					System.err.println("client is validating, leaving it be for a moment.");
 				}
 			}
 

@@ -120,7 +120,7 @@ public class QueueingClient extends Observable implements Runnable, AnnounceResp
 		this.service = new ConnectionHandler(this.torrent, id, address, seedport);
 		this.service.register(this);
 
-		this.self = new Peer(this.service.getSocketAddress().getAddress().getHostAddress(), (short) this.service.getSocketAddress().getPort(),
+		this.self = new Peer(this.service.getSocketAddress().getAddress().getHostAddress(), (int) this.service.getSocketAddress().getPort(),
 				ByteBuffer.wrap(id.getBytes(Torrent.BYTE_ENCODING)));
 
 		// Initialize the announce request thread, and register ourselves to it
