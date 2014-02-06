@@ -10,3 +10,7 @@ dependencies {
 
 }
 
+task(runTS, dependsOn: "classes", type: JavaExec) {
+         main = "org.syncany.connection.plugins.bt.TestSeeding"
+         classpath = sourceSets.main.runtimeClasspath
+}
