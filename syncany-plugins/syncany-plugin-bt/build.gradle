@@ -5,6 +5,8 @@ dependencies {
     //  compile                 "com.turn:ttorrent:1.4"          
     testCompile     "junit:junit:4.3"
       testCompile     project(path : ':syncany-lib', configuration: 'tests')
+//    runtime 'org.slf4j:slf4j-log4j12:1.7.5'
+  runtime 'org.slf4j:slf4j-jdk14:1.7.5'
 
 }
 

@@ -40,8 +40,10 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.syncany.connection.plugins.AbstractTransferManager;
@@ -79,6 +81,11 @@ public class BtTransferManager extends AbstractTransferManager {
 
 	public BtTransferManager(BtConnection connection) {
 		super(connection);
+		logger.setLevel(Level.INFO);
+		ConsoleHandler handler = new ConsoleHandler();
+		handler.setFormatter(new SimpleFormatter());
+		logger.addHandler(handler);
+		handler.setLevel(Level.INFO);
 
 		this.repoPath = connection.getUrl().replaceAll("/$", "");
 		this.multichunkPath = connection.getUrl() + "/torrents";
