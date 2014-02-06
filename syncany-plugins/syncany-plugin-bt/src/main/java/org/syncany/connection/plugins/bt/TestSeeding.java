@@ -116,11 +116,11 @@ public class TestSeeding {
 		ArrayList<QueueingClient> clients = new ArrayList<QueueingClient>();
 		InetAddress address = obtainInetAddress();
 
-		File torrentdir = new File("/home/christof/nobackup/syncany-testbed/a/.syncany/btcache/torrents");
+		File torrentdir = new File(".syncany/btcache/torrents");
 		int currentlyseeding = 0;
 
 		for (File torrent : torrentdir.listFiles()) {
-			File destination = new File("/home/christof/nobackup/syncany-testbed/a/.syncany/btcache");
+			File destination = new File(".syncany/btcache/data");
 			destination.mkdirs();
 			System.out.println(port);
 			QueueingClient client = new QueueingClient(address, SharedTorrent.fromFile(torrent, destination), port);
