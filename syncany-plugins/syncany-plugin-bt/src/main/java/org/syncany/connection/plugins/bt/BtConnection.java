@@ -41,6 +41,7 @@ public class BtConnection implements Connection {
 	private String url;
 	private String username;
 	private String password;
+	private int port;
 
 	private boolean secure;
 	private SSLSocketFactory sslSocketFactory;
@@ -56,6 +57,7 @@ public class BtConnection implements Connection {
 		String url = map.get("url");
 		String username = map.get("username");
 		String password = map.get("password");
+		String port = map.get("port");
 
 		if (url == null || username == null || password == null) {
 			throw new StorageException("Mandatory fields missing for Webdav configuration: url, username and password.");
@@ -64,6 +66,7 @@ public class BtConnection implements Connection {
 		this.url = url;
 		this.username = username;
 		this.password = password;
+		this.port = Integer.parseInt(port);
 
 		// SSL
 		if (url.toLowerCase().startsWith("https")) {
@@ -108,7 +111,7 @@ public class BtConnection implements Connection {
 	 */
 	@Override
 	public String toString() {
-		return BtConnection.class.getSimpleName() + "[url=" + url + ", username=" + username + "]";
+		return BtConnection.class.getSimpleName() + "[url=" + url + ", username=" + username + ", port=" + port + "]";
 	}
 
 	public String getUrl() {
@@ -117,6 +120,14 @@ public class BtConnection implements Connection {
 
 	public void setUrl(String url) {
 		this.url = url;
+	}
+
+	public void setPort(int port) {
+		this.port = port;
+	}
+
+	public int getPort() {
+		return port;
 	}
 
 	public String getUsername() {
@@ -151,6 +162,6 @@ public class BtConnection implements Connection {
 	public PluginOptionSpecs getOptionSpecs() {
 		return new PluginOptionSpecs(new PluginOptionSpec("url", "URL (incl. path & port)", ValueType.STRING, true, false, null),
 				new PluginOptionSpec("username", "Username", ValueType.STRING, true, false, null), new PluginOptionSpec("password", "Password",
-						ValueType.STRING, true, true, null));
+						ValueType.STRING, true, true, null), new PluginOptionSpec("port", "Seeding-Port", ValueType.STRING, false, false, "50153"));
 	}
 }

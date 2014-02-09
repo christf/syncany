@@ -62,7 +62,7 @@ import com.turn.ttorrent.common.protocol.TrackerMessage;
 
 public class QueueingClient extends Observable implements Runnable, AnnounceResponseListener, IncomingConnectionListener, PeerActivityListener {
 
-	private static final Logger logger = LoggerFactory.getLogger(QueueingClient.class);
+	private static final Logger logger = LoggerFactory.getLogger(TestSeeding.class);
 
 	/**
 	 * Peers unchoking frequency, in seconds. Current BitTorrent specification
@@ -97,7 +97,6 @@ public class QueueingClient extends Observable implements Runnable, AnnounceResp
 	private Announce announce;
 	private ConcurrentMap<String, SharingPeer> peers;
 	private ConcurrentMap<String, SharingPeer> connected;
-
 	private Random random;
 
 	/**
@@ -189,8 +188,12 @@ public class QueueingClient extends Observable implements Runnable, AnnounceResp
 	 * @param state
 	 *            The new client state.
 	 */
-	Date lastchange;
+	Date lastChange;
 	double seedingscore;
+
+	public double getSeedingscore() {
+		return seedingscore;
+	}
 
 	private void updateseedingscore(int complete, int incomplete) {
 		if (incomplete == 0) {
@@ -209,7 +212,7 @@ public class QueueingClient extends Observable implements Runnable, AnnounceResp
 			this.setChanged();
 		}
 		this.state = state;
-		this.lastchange = new Date();
+		this.lastChange = new Date();
 
 		this.notifyObservers(this.state);
 	}
@@ -271,14 +274,12 @@ public class QueueingClient extends Observable implements Runnable, AnnounceResp
 	 */
 	public void stop(boolean wait) {
 		this.stop = true;
-
 		if (this.thread != null && this.thread.isAlive()) {
 			this.thread.interrupt();
 			if (wait) {
 				this.waitForCompletion();
 			}
 		}
-
 		this.thread = null;
 	}
 
@@ -921,6 +922,13 @@ public class QueueingClient extends Observable implements Runnable, AnnounceResp
 		logger.info("Seeding for {} seconds...", this.seed);
 		Timer timer = new Timer();
 		timer.schedule(new ClientShutdown(this, timer), this.seed * 1000);
+	}
+
+	/**
+	 * @return the lastStatusChange
+	 */
+	public Date getLastChange() {
+		return lastChange;
 	}
 
 	/**

@@ -40,10 +40,8 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.syncany.connection.plugins.AbstractTransferManager;
@@ -57,7 +55,6 @@ import com.github.sardine.DavResource;
 import com.github.sardine.Sardine;
 import com.github.sardine.SardineFactory;
 import com.github.sardine.impl.SardineImpl;
-import com.turn.ttorrent.client.Client;
 import com.turn.ttorrent.client.SharedTorrent;
 
 // TODO [medium] use torrent library that supports DHT
@@ -67,7 +64,7 @@ public class BtTransferManager extends AbstractTransferManager {
 	private static final Logger logger = Logger.getLogger(BtTransferManager.class.getSimpleName());
 
 	private static final String announceUrl = "http://kdserv.dyndns.org:6969/announce";
-
+	private int port;
 	private Sardine sardine;
 	private ArrayList<SeedEntry> seedList;
 
@@ -81,15 +78,16 @@ public class BtTransferManager extends AbstractTransferManager {
 
 	public BtTransferManager(BtConnection connection) {
 		super(connection);
-		logger.setLevel(Level.INFO);
-		ConsoleHandler handler = new ConsoleHandler();
-		handler.setFormatter(new SimpleFormatter());
-		logger.addHandler(handler);
-		handler.setLevel(Level.INFO);
+		// logger.setLevel(Level.INFO);
+		// ConsoleHandler handler = new ConsoleHandler();
+		// handler.setFormatter(new SimpleFormatter());
+		// logger.addHandler(handler);
+		// handler.setLevel(Level.INFO);
 
 		this.repoPath = connection.getUrl().replaceAll("/$", "");
 		this.multichunkPath = connection.getUrl() + "/torrents";
 		this.databasePath = connection.getUrl() + "/databases";
+		this.port = connection.getPort();
 	}
 
 	@Override
@@ -227,7 +225,7 @@ public class BtTransferManager extends AbstractTransferManager {
 		connect();
 
 		try {
-			Client client;
+			QueueingClient client;
 
 			String remoteURL = getRemoteFileUrl(remoteFile);
 
@@ -243,7 +241,7 @@ public class BtTransferManager extends AbstractTransferManager {
 				String localTorrentFile = new String();
 				localTorrentFile = btTorrentDir + File.separator + localFile.getName() + ".torrent";
 				Files.move(localFile.toPath(), Paths.get(localTorrentFile), options[0]);
-				client = new Client(inetaddress, SharedTorrent.fromFile(new File(localTorrentFile), localFile.getParentFile()));
+				client = new QueueingClient(inetaddress, SharedTorrent.fromFile(new File(localTorrentFile), localFile.getParentFile()), this.port);
 				client.download();
 				client.waitForCompletion();
 				Files.copy(localFile.toPath(), Paths.get(btDataDir + File.separator + localFile.getName()), options[0]);
