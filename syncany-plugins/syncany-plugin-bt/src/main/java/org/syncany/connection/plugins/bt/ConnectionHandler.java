@@ -112,7 +112,7 @@ public class ConnectionHandler implements Runnable {
 
 	private static final int CLIENT_KEEP_ALIVE_MINUTES = 3;
 
-	private Set<SharedTorrent> torrent;
+	private SharedTorrent torrent;
 	private String id;
 	private ServerSocketChannel channel;
 	private InetSocketAddress address;
@@ -142,7 +142,7 @@ public class ConnectionHandler implements Runnable {
 	 *             defined range is available or usable.
 	 */
 	public ConnectionHandler(SharedTorrent torrent, String id, InetAddress address, int port_start) throws IOException {
-		this.torrent.add(torrent);
+		this.torrent = torrent;
 		this.id = id;
 
 		// Bind to the first available port in the range
@@ -265,6 +265,7 @@ public class ConnectionHandler implements Runnable {
 	 */
 	@Override
 	public void run() {
+		// TODO iterate through all
 		while (!this.stop) {
 			try {
 				SocketChannel client = this.channel.accept();
@@ -325,6 +326,48 @@ public class ConnectionHandler implements Runnable {
 			logger.debug("New incoming connection, waiting for handshake...");
 			Handshake hs = this.validateHandshake(client, null);
 			int sent = this.sendHandshake(client);
+			logger.trace("Replied to {} with handshake ({} bytes).", this.socketRepr(client), sent);
+
+			// Go to non-blocking mode for peer interaction
+			client.configureBlocking(false);
+			client.socket().setSoTimeout(CLIENT_KEEP_ALIVE_MINUTES * 60 * 1000);
+			this.fireNewPeerConnection(client, hs.getPeerId());
+		}
+		catch (ParseException pe) {
+			logger.info("Invalid handshake from {}: {}", this.socketRepr(client), pe.getMessage());
+			IOUtils.closeQuietly(client);
+		}
+		catch (IOException ioe) {
+			logger.warn("An error occured while reading an incoming " + "handshake: {}", ioe.getMessage());
+			if (client.isConnected()) {
+				IOUtils.closeQuietly(client);
+			}
+		}
+	}
+
+	/**
+	 * Accept the next incoming connection.
+	 * 
+	 * <p>
+	 * When a new peer connects to this service, wait for it to send its
+	 * handshake. We then parse and check that the handshake advertises the
+	 * torrent hash we expect, then reply with our own handshake.
+	 * </p>
+	 * 
+	 * <p>
+	 * If everything goes according to plan, notify the
+	 * <code>IncomingConnectionListener</code>s with the connected socket and
+	 * the parsed peer ID.
+	 * </p>
+	 * 
+	 * @param client
+	 *            The accepted client's socket channel.
+	 */
+	private void accept(SocketChannel client, SharedTorrent torrent) throws IOException, SocketTimeoutException {
+		try {
+			logger.debug("New incoming connection, waiting for handshake...");
+			Handshake hs = this.validateHandshake(client, null);
+			int sent = this.sendHandshake(client, torrent);
 			logger.trace("Replied to {} with handshake ({} bytes).", this.socketRepr(client), sent);
 
 			// Go to non-blocking mode for peer interaction
@@ -414,12 +457,15 @@ public class ConnectionHandler implements Runnable {
 		data.rewind();
 		Handshake hs = Handshake.parse(data);
 		boolean isThisForMe = false;
-		for (SharedTorrent torrent : this.torrent) {
-			if (Arrays.equals(hs.getInfoHash(), torrent.getInfoHash())) {
-				// found match
-				isThisForMe = true;
-			}
+		if (Arrays.equals(hs.getInfoHash(), this.torrent.getInfoHash())) {
+			isThisForMe = true;
 		}
+		// for (SharedTorrent torrent : this.torrent) {
+		// if (Arrays.equals(hs.getInfoHash(), torrent.getInfoHash())) {
+		// found match
+		// isThisForMe = true;
+		// }
+		// }
 		if (!isThisForMe) {
 			throw new ParseException("Handshake for unknow torrent " + Torrent.byteArrayToHexString(hs.getInfoHash()) + " from "
 					+ this.socketRepr(channel) + ".", pstrlen + 9);
@@ -439,9 +485,17 @@ public class ConnectionHandler implements Runnable {
 	 * @param channel
 	 *            The socket channel to the remote peer.
 	 */
-	private int sendHandshake(SocketChannel channel) throws IOException {
+	private int sendHandshake(SocketChannel channel, SharedTorrent torrent) throws IOException {
+		return channel.write(Handshake.craft(torrent.getInfoHash(), this.id.getBytes(Torrent.BYTE_ENCODING)).getData());
+	}
 
-		// TODO how can it be determined which infohash to send? THIS DOES NOT WORK!
+	/**
+	 * Send our handshake message to the socket.
+	 * 
+	 * @param channel
+	 *            The socket channel to the remote peer.
+	 */
+	private int sendHandshake(SocketChannel channel) throws IOException {
 		return channel.write(Handshake.craft(this.torrent.getInfoHash(), this.id.getBytes(Torrent.BYTE_ENCODING)).getData());
 	}
 

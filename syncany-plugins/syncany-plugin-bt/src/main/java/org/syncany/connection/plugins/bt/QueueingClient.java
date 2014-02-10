@@ -196,8 +196,12 @@ public class QueueingClient extends Observable implements Runnable, AnnounceResp
 	}
 
 	private void updateseedingscore(int complete, int incomplete) {
+
 		if (incomplete == 0) {
 			this.seedingscore = 0;
+		}
+		else if (complete == 0) {
+			this.seedingscore = 1;
 		}
 		else if (complete / incomplete > 5) {
 			this.seedingscore = 0;
