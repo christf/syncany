@@ -116,31 +116,24 @@ public class TestLeeching {
 			QueueingClient client = new QueueingClient(obtainInetAddress(), SharedTorrent.fromFile(torrent, destination), port);
 			System.out.println("Start to download: " + torrent.getName() + " " + client.getTorrent().getHexInfoHash());
 			clientList.add(client);
-			System.out.println(clientList.size());
 			client.share();
 		}
 
-		System.out.println("vorm loop " + clientList.size());
 		while (!clientList.isEmpty()) {
 			System.out.println("im loop " + clientList.size());
 			for (QueueingClient client : clientList) // use for-each loop
 			{
-				while (!ClientState.SEEDING.equals(client.getState())) {
-					// Check if there's an error
-					if (ClientState.ERROR.equals(client.getState())) {
-						throw new Exception("ttorrent client Error State");
-					}
+				// Display statistics
+				System.out.printf("%f %% - %d bytes downloaded - %d bytes uploaded", client.getTorrent().getCompletion(), client.getTorrent()
+						.getDownloaded(), client.getTorrent().getUploaded());
+				System.out.println(" " + client.getTorrent().getFilenames() + " " + client.getState());
+				// Wait one second
 
-					// Display statistics
-					System.out.printf("%f %% - %d bytes downloaded - %d bytes uploaded", client.getTorrent().getCompletion(), client.getTorrent()
-							.getDownloaded(), client.getTorrent().getUploaded());
-					System.out.println(" " + client.getTorrent().getFilenames());
-					// Wait one second
-					TimeUnit.SECONDS.sleep(1);
+				if (ClientState.SEEDING.equals(client.getState())) {
+					clientList.remove(client);
 				}
-
 			}
-
+			TimeUnit.SECONDS.sleep(1);
 		}
 	}
 }
