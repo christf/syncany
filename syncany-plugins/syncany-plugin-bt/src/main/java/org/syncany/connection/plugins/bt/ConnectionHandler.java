@@ -112,7 +112,7 @@ public class ConnectionHandler implements Runnable {
 
 	private static final int CLIENT_KEEP_ALIVE_MINUTES = 3;
 
-	private SharedTorrent torrent;
+	private Set<SharedTorrent> torrent;
 	private String id;
 	private ServerSocketChannel channel;
 	private InetSocketAddress address;
@@ -142,7 +142,7 @@ public class ConnectionHandler implements Runnable {
 	 *             defined range is available or usable.
 	 */
 	public ConnectionHandler(SharedTorrent torrent, String id, InetAddress address, int port_start) throws IOException {
-		this.torrent = torrent;
+		this.torrent.add(torrent);
 		this.id = id;
 
 		// Bind to the first available port in the range
@@ -413,7 +413,14 @@ public class ConnectionHandler implements Runnable {
 		// Parse and check the handshake
 		data.rewind();
 		Handshake hs = Handshake.parse(data);
-		if (!Arrays.equals(hs.getInfoHash(), this.torrent.getInfoHash())) {
+		boolean isThisForMe = false;
+		for (SharedTorrent torrent : this.torrent) {
+			if (Arrays.equals(hs.getInfoHash(), torrent.getInfoHash())) {
+				// found match
+				isThisForMe = true;
+			}
+		}
+		if (!isThisForMe) {
 			throw new ParseException("Handshake for unknow torrent " + Torrent.byteArrayToHexString(hs.getInfoHash()) + " from "
 					+ this.socketRepr(channel) + ".", pstrlen + 9);
 		}
@@ -433,6 +440,8 @@ public class ConnectionHandler implements Runnable {
 	 *            The socket channel to the remote peer.
 	 */
 	private int sendHandshake(SocketChannel channel) throws IOException {
+
+		// TODO how can it be determined which infohash to send? THIS DOES NOT WORK!
 		return channel.write(Handshake.craft(this.torrent.getInfoHash(), this.id.getBytes(Torrent.BYTE_ENCODING)).getData());
 	}
 

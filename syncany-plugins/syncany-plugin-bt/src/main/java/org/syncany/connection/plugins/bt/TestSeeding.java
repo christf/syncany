@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -126,8 +127,16 @@ public class TestSeeding {
 		catch (Exception e) {
 			logger.warning("could not map port " + port + " via upnp.");
 		}
-		ArrayList<QueueingClient> clients = new ArrayList<QueueingClient>();
+
 		InetAddress address = obtainInetAddress();
+		String id = QueueingClient.BITTORRENT_ID_PREFIX + UUID.randomUUID().toString().split("-")[4];
+
+		// Initialize the incoming connection handler and register ourselves to
+		// it.
+		logger.info("passing the following address to connectionhandler: " + address);
+		ConnectionHandler service = new ConnectionHandler(this.torrent, id, obtainInetAddress(), port);
+
+		ArrayList<QueueingClient> clients = new ArrayList<QueueingClient>();
 
 		File torrentdir = new File(dir + ".syncany/btcache/torrents");
 		int currentlyseeding = 0;
