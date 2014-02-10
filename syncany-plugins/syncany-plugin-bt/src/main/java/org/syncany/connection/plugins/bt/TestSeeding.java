@@ -186,13 +186,13 @@ public class TestSeeding {
 					}
 					logger.info(client.getTorrent().getName() + " has " + Integer.toString(numberOfInterested) + " interested peers");
 					if (numberOfInterested == 0 && calcStatusTime(client) > 2000) {
-						QueueingClient tmpClient = new QueueingClient(address, new SharedTorrent(client.getTorrent()), port);
-						client.stop();
-						client.waitForCompletion();
+						// QueueingClient tmpClient = new QueueingClient(address, new SharedTorrent(client.getTorrent()), port);
+						// client.stop();
+						// client.waitForCompletion();
 
-						client = null;
-						client = tmpClient;
-						currentlyseeding--;
+						// client = null;
+						// client = tmpClient;
+						// currentlyseeding--;
 					}
 					break;
 				case ERROR:

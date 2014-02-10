@@ -26,6 +26,7 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.UnresolvedAddressException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.concurrent.TimeUnit;
@@ -99,36 +100,47 @@ public class TestLeeching {
 	}
 
 	public static void main(String[] args) throws Exception {
+		System.out.println("running");
+		File torrentdir = new File("/home/pi/torrent/torrents");
+		File destination = new File("/home/pi/torrent/data");
+		destination.mkdirs();
+		int port = 6881;
 
-		QueueingClient client;
+		ArrayList<QueueingClient> clientList = new ArrayList<QueueingClient>();
+		System.out.println(torrentdir.listFiles());
+		for (File torrent : torrentdir.listFiles()) {
+			System.out.println(port);
+			// if (!torrentFiles.contains(torrent.getName())) {
+			// torrentFiles.add(torrent.getName());
+			// }
+			QueueingClient client = new QueueingClient(obtainInetAddress(), SharedTorrent.fromFile(torrent, destination), port);
+			System.out.println("Start to download: " + torrent.getName() + " " + client.getTorrent().getHexInfoHash());
+			clientList.add(client);
+			System.out.println(clientList.size());
+			client.share();
+		}
 
-		SharedTorrent torrent = SharedTorrent.fromFile(new File("test-http.torrent"), new File("./download/"));
-		client = new QueueingClient(obtainInetAddress(), torrent, 50678);
+		System.out.println("vorm loop " + clientList.size());
+		while (!clientList.isEmpty()) {
+			System.out.println("im loop " + clientList.size());
+			for (QueueingClient client : clientList) // use for-each loop
+			{
+				while (!ClientState.SEEDING.equals(client.getState())) {
+					// Check if there's an error
+					if (ClientState.ERROR.equals(client.getState())) {
+						throw new Exception("ttorrent client Error State");
+					}
 
-		try {
-			System.out.println("Start to download: " + torrent.getName());
-			client.share(); // SEEDING for completion signal
-			// client.download() // DONE for completion signal
-			System.out.println(client.getTorrent().getHexInfoHash());
-			while (!ClientState.SEEDING.equals(client.getState())) {
-				// Check if there's an error
-				if (ClientState.ERROR.equals(client.getState())) {
-					throw new Exception("ttorrent client Error State");
+					// Display statistics
+					System.out.printf("%f %% - %d bytes downloaded - %d bytes uploaded", client.getTorrent().getCompletion(), client.getTorrent()
+							.getDownloaded(), client.getTorrent().getUploaded());
+					System.out.println(" " + client.getTorrent().getFilenames());
+					// Wait one second
+					TimeUnit.SECONDS.sleep(1);
 				}
 
-				// Display statistics
-				System.out.printf("%f %% - %d bytes downloaded - %d bytes uploaded", torrent.getCompletion(), torrent.getDownloaded(),
-						torrent.getUploaded());
-				System.out.println(" " + torrent.getFilenames());
-				// Wait one second
-				TimeUnit.SECONDS.sleep(1);
 			}
 
-			// client.waitForCompletion();
-		}
-		catch (IOException | InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 	}
 }

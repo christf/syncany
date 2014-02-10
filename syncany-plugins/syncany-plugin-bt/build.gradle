@@ -13,3 +13,7 @@ task(runTS, dependsOn: "classes", type: JavaExec) {
          main = "org.syncany.connection.plugins.bt.TestSeeding"
          classpath = sourceSets.main.runtimeClasspath
 }
+task(runTL, dependsOn: "classes", type: JavaExec) {
+         main = "org.syncany.connection.plugins.bt.TestLeeching"
+         classpath = sourceSets.main.runtimeClasspath
+}
