@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -38,8 +37,8 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.SAXException;
 
-import com.turn.ttorrent.client.SharedTorrent;
-import com.turn.ttorrent.client.peer.SharingPeer;
+import com.turn.ttorrent.client.Client;
+import com.turn.ttorrent.common.Torrent;
 
 /**
  * @author christof
@@ -116,8 +115,9 @@ public class TestSeeding {
 
 	public static void main(String[] args) throws IOException, InterruptedException, SAXException, ParserConfigurationException {
 		final int maxseeding = 10;
-		String dir = new String("/home/pi/syncany-testbed/a/");
 		int port = 43534;
+		int currentlyseeding = 0;
+
 		Port seedingPort = new Port();
 		try {
 			seedingPort.init();
@@ -128,98 +128,115 @@ public class TestSeeding {
 		}
 
 		InetAddress address = obtainInetAddress();
-		// String id = QueueingClient.BITTORRENT_ID_PREFIX + UUID.randomUUID().toString().split("-")[4];
-
-		// Initialize the incoming connection handler and register ourselves to
-		// it.
 		logger.info("passing the following address to connectionhandler: " + address);
-		// ConnectionHandler service = new ConnectionHandler(this.torrent, id, obtainInetAddress(), port);
 
 		ArrayList<QueueingClient> clients = new ArrayList<QueueingClient>();
 
-		File torrentdir = new File(dir + ".syncany/btcache/torrents");
-		int currentlyseeding = 0;
+		File torrentdir = new File("/home/pi/torrent/torrents");
+
 		ArrayList<String> torrentFiles = new ArrayList<String>();
+		File destination = new File("/home/pi/torrent/seeddata");
+		destination.mkdirs();
 
-		for (File torrent : torrentdir.listFiles()) {
-			File destination = new File(dir + ".syncany/btcache/data");
-			destination.mkdirs();
-			System.out.println(port);
-			if (!torrentFiles.contains(torrent.getName())) {
-				torrentFiles.add(torrent.getName());
-			}
-			QueueingClient client = new QueueingClient(address, SharedTorrent.fromFile(torrent, destination), port);
-			clients.add(client);
-		}
+		Client c = new Client(null);
+		// TODO [major] map the port via upnp
+		// TODO [med] get rid of polling the torrents-dir and have "sy down" notify the seeder-process
+		try {
+			c.start();
 
-		int t = 0;
-		boolean considertime = false;
-		while (t < 1000) {
-			for (QueueingClient client : clients) {
-
-				// System.out.println(client.getTorrent().getName() + " " + client.getState());
-				// client.info();
-				logger.info("Status: " + client.getState().toString() + " last status change: " + client.getLastChange() + " score: "
-						+ client.getSeedingscore());
-
-				if (considertime == false && currentlyseeding == maxseeding) {
-					considertime = true;
-				}
-
-				switch (client.getState()) {
-				case WAITING:
-					if (currentlyseeding < maxseeding) {
-						if (!considertime || (considertime && calcStatusTime(client) > 20000 * 60)) {
-							client.share();
-							currentlyseeding++;
+			while (true) {
+				for (File ftorrent : torrentdir.listFiles()) {
+					if (!torrentFiles.contains(ftorrent.getName())) {
+						// found a new torrent, seed it iff it has finished downloading.
+						String tDataFileName = new String(destination.getAbsolutePath() + File.separatorChar + ftorrent.getName());
+						File cdatafile = new File(tDataFileName.substring(0, tDataFileName.length() - 8));
+						if (cdatafile.isFile()) {
+							torrentFiles.add(ftorrent.getName());
+							Torrent torrent = new Torrent(ftorrent);
+							TorrentHandler torrentHandler = new TorrentHandler(c, torrent, destination);
+							c.addTorrent(torrentHandler);
 						}
 					}
-					break;
-
-				case DONE:
-					if (currentlyseeding < maxseeding) {
-						logger.info("STARTE CLIENT NEU");
-						client.share();
-						currentlyseeding++;
-						logger.info("STARTE CLIENT NEU");
-					}
-					break;
-				case SEEDING:
-					Set<SharingPeer> sharingPeers = client.getPeers();
-					int numberOfInterested = 0;
-					for (SharingPeer sharingPeer : sharingPeers) {
-						if (sharingPeer.isInterested()) {
-							numberOfInterested++;
-						}
-					}
-					logger.info(client.getTorrent().getName() + " has " + Integer.toString(numberOfInterested) + " interested peers");
-					if (numberOfInterested == 0 && calcStatusTime(client) > 2000) {
-						// QueueingClient tmpClient = new QueueingClient(address, new SharedTorrent(client.getTorrent()), port);
-						// client.stop();
-						// client.waitForCompletion();
-
-						// client = null;
-						// client = tmpClient;
-						// currentlyseeding--;
-					}
-					break;
-				case ERROR:
-					System.err.println("client error state found");
-					break;
-				case SHARING:
-					System.err.println("BUG DETECTED - client is still downloading - why is that? it should be finished if it is in this queue");
-					break;
-				case VALIDATING:
-					System.err.println("client is validating, leaving it be for a moment.");
-					break;
-
 				}
+				// poll for changes on the torrent dir every minute...
+				TimeUnit.SECONDS.sleep(60);
 			}
-
-			TimeUnit.SECONDS.sleep(1);
-			t++;
-			logger.info("===============================================================");
 		}
+		catch (Exception e) {
+			logger.severe("Fatal error: {}" + e.getMessage() + e.getStackTrace());
+			System.exit(2);
+		}
+		finally {
+			c.stop();
+		}
+
+		// int t = 0;
+		// boolean considertime = false;
+		// while (t < 1000) {
+		// for (QueueingClient client : clients) {
+		// // System.out.println(client.getTorrent().getName() + " " + client.getState());
+		// // client.info();
+		// logger.info("Status: " + client.getState().toString() + " last status change: " + client.getLastChange() + " score: "
+		// + client.getSeedingscore());
+		//
+		// if (considertime == false && currentlyseeding == maxseeding) {
+		// considertime = true;
+		// }
+		//
+		// switch (client.getState()) {
+		// case WAITING:
+		// if (currentlyseeding < maxseeding) {
+		// if (!considertime || (considertime && calcStatusTime(client) > 20000 * 60)) {
+		// client.share();
+		// currentlyseeding++;
+		// }
+		// }
+		// break;
+		//
+		// case DONE:
+		// if (currentlyseeding < maxseeding) {
+		// logger.info("STARTE CLIENT NEU");
+		// client.share();
+		// currentlyseeding++;
+		// logger.info("STARTE CLIENT NEU");
+		// }
+		// break;
+		// case SEEDING:
+		// Set<SharingPeer> sharingPeers = client.getPeers();
+		// int numberOfInterested = 0;
+		// for (SharingPeer sharingPeer : sharingPeers) {
+		// if (sharingPeer.isInterested()) {
+		// numberOfInterested++;
+		// }
+		// }
+		// logger.info(client.getTorrent().getName() + " has " + Integer.toString(numberOfInterested) + " interested peers");
+		// if (numberOfInterested == 0 && calcStatusTime(client) > 2000) {
+		// // QueueingClient tmpClient = new QueueingClient(address, new SharedTorrent(client.getTorrent()), port);
+		// // client.stop();
+		// // client.waitForCompletion();
+		//
+		// // client = null;
+		// // client = tmpClient;
+		// // currentlyseeding--;
+		// }
+		// break;
+		// case ERROR:
+		// System.err.println("client error state found");
+		// break;
+		// case SHARING:
+		// System.err.println("BUG DETECTED - client is still downloading - why is that? it should be finished if it is in this queue");
+		// break;
+		// case VALIDATING:
+		// System.err.println("client is validating, leaving it be for a moment.");
+		// break;
+		//
+		// }
+		// }
+		//
+		// TimeUnit.SECONDS.sleep(1);
+		// t++;
+		// logger.info("===============================================================");
+		// }
 
 		// You can optionally set download/upload rate limits
 		// in kB/second. Setting a limit to 0.0 disables rate
