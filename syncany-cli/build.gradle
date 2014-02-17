@@ -2,6 +2,7 @@ import java.io.File;
 
 dependencies {
 	compile			project(":syncany-lib")
+	compile			project(":syncany-plugins:syncany-plugin-bt")
 	compile			project(":syncany-plugins:syncany-plugin-ftp")
 	compile			project(":syncany-plugins:syncany-plugin-rest")    
 	compile			project(":syncany-plugins:syncany-plugin-webdav")    	
