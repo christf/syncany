@@ -1,6 +1,6 @@
 /*
  * Syncany, www.syncany.org
- * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ * Copyright (C) 2011-2014 Philipp C. Heckel <philipp.heckel@gmail.com> 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@ import joptsimple.OptionSpec;
 import org.syncany.chunk.CipherTransformer;
 import org.syncany.chunk.FixedChunker;
 import org.syncany.chunk.GzipTransformer;
+import org.syncany.chunk.MultiChunker;
 import org.syncany.chunk.ZipMultiChunker;
 import org.syncany.config.to.ConfigTO;
 import org.syncany.config.to.ConfigTO.ConnectionTO;
@@ -299,7 +300,7 @@ public class InitCommand extends AbstractInitCommand implements InitOperationLis
 		
 		multichunkerTO.setType(ZipMultiChunker.TYPE); 
 		multichunkerTO.setSettings(new HashMap<String, String>());
-		multichunkerTO.getSettings().put(ZipMultiChunker.PROPERTY_SIZE, "512");
+		multichunkerTO.getSettings().put(MultiChunker.PROPERTY_SIZE, "4096");
 		
 		return multichunkerTO;		
 	}

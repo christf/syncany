@@ -1,6 +1,6 @@
 /*
  * Syncany, www.syncany.org
- * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ * Copyright (C) 2011-2014 Philipp C. Heckel <philipp.heckel@gmail.com> 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
  */
 package org.syncany.config.to;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.simpleframework.xml.Element;
@@ -54,7 +55,7 @@ public class RepoTO {
 	private MultiChunkerTO multiChunker;
 	
 	@ElementList(name="transformers", required=false, entry="transformer")
-	private List<TransformerTO> transformers;
+	private ArrayList<TransformerTO> transformers;
 	
 	public byte[] getRepoId() {
 		return repoId;
@@ -87,7 +88,7 @@ public class RepoTO {
 		this.chunker = chunker;
 	}
 
-	public MultiChunkerTO getMultichunker() {
+	public MultiChunkerTO getMultiChunker() {
 		return multiChunker;
 	}
 
@@ -95,12 +96,12 @@ public class RepoTO {
 		this.multiChunker = multiChunker;
 	}
 
-	public List<TransformerTO> getTransformerTOs() {
+	public List<TransformerTO> getTransformers() {
 		return transformers;
 	}
 
 	public void setTransformers(List<TransformerTO> transformers) {
-		this.transformers = transformers;
+		this.transformers = (transformers != null) ? new ArrayList<TransformerTO>(transformers) : null;
 	}
 
 	public static class ChunkerTO extends TypedPropertyListTO {

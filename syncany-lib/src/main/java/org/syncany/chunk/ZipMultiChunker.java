@@ -1,6 +1,6 @@
 /*
  * Syncany, www.syncany.org
- * Copyright (C) 2011-2013 Philipp C. Heckel <philipp.heckel@gmail.com> 
+ * Copyright (C) 2011-2014 Philipp C. Heckel <philipp.heckel@gmail.com> 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,17 +27,20 @@ import java.io.OutputStream;
  * @author pheckel
  */
 public class ZipMultiChunker extends MultiChunker {
-    public static final String TYPE = "zip";
-	public static final String PROPERTY_SIZE = "size";
+	public static final String TYPE = "zip";
+
+	public ZipMultiChunker() {
+		// Nothing
+	}
 
 	public ZipMultiChunker(int minMultiChunkSize) {
-        super(minMultiChunkSize);
-    }
+		super(minMultiChunkSize);
+	}
 
-    @Override
-    public MultiChunk createMultiChunk(InputStream is) {
-        return new ZipMultiChunk(is);
-    }    
+	@Override
+	public MultiChunk createMultiChunk(InputStream is) {
+		return new ZipMultiChunk(is);
+	}
 
 	@Override
 	public MultiChunk createMultiChunk(File file) throws IOException {
@@ -49,14 +52,14 @@ public class ZipMultiChunker extends MultiChunker {
 		}
 	}
 
-    @Override
-    public MultiChunk createMultiChunk(byte[] id, OutputStream os) throws IOException {
-        return new ZipMultiChunk(id, minMultiChunkSize, os);
-    }
-    
-    @Override
-    public String toString() {
-        return "Zip-"+minMultiChunkSize;
-    }
-    
+	@Override
+	public MultiChunk createMultiChunk(byte[] id, OutputStream os) throws IOException {
+		return new ZipMultiChunk(id, minMultiChunkSize, os);
+	}
+
+	@Override
+	public String toString() {
+		return "Zip-" + minMultiChunkSize;
+	}
+
 }
