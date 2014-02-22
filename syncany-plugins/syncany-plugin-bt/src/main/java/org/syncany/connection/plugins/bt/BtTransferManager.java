@@ -22,12 +22,14 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.UnresolvedAddressException;
 import java.nio.file.CopyOption;
@@ -40,9 +42,13 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.syncany.connection.plugins.AbstractTransferManager;
 import org.syncany.connection.plugins.DatabaseRemoteFile;
@@ -55,7 +61,10 @@ import com.github.sardine.DavResource;
 import com.github.sardine.Sardine;
 import com.github.sardine.SardineFactory;
 import com.github.sardine.impl.SardineImpl;
-import com.turn.ttorrent.client.SharedTorrent;
+import com.turn.ttorrent.client.Client;
+import com.turn.ttorrent.client.TorrentHandler;
+import com.turn.ttorrent.common.Torrent;
+import com.turn.ttorrent.common.TorrentCreator;
 
 // TODO [medium] use torrent library that supports DHT
 
@@ -66,7 +75,6 @@ public class BtTransferManager extends AbstractTransferManager {
 	private static final String announceUrl = "http://kdserv.dyndns.org:6969/announce";
 	private int port;
 	private Sardine sardine;
-	private ArrayList<SeedEntry> seedList;
 
 	private final String btCache = ".syncany/btcache";
 	private final String btDataDir = btCache + File.separator + "data";
@@ -225,7 +233,7 @@ public class BtTransferManager extends AbstractTransferManager {
 		connect();
 
 		try {
-			QueueingClient client;
+			Client client;
 
 			String remoteURL = getRemoteFileUrl(remoteFile);
 
@@ -236,24 +244,43 @@ public class BtTransferManager extends AbstractTransferManager {
 			webdavFileInputStream.close();
 
 			if (isMultiChunkRemoteFile(remoteFile.getClass())) {
-				// we did not download the data but the torrent file. Correct the paths
+				// we did not download the data but the torrent file. Getting the data and correcting the paths
 				CopyOption[] options = new CopyOption[] { StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES };
 				String localTorrentFile = new String();
 				localTorrentFile = btTorrentDir + File.separator + localFile.getName() + ".torrent";
 				Files.move(localFile.toPath(), Paths.get(localTorrentFile), options[0]);
-				client = new QueueingClient(inetaddress, SharedTorrent.fromFile(new File(localTorrentFile), localFile.getParentFile()), this.port);
-				client.download();
-				client.waitForCompletion();
+				Torrent torrent;
+				torrent = new Torrent(new File(localTorrentFile));
+				client = new Client(new InetSocketAddress(this.inetaddress, this.port));
+				TorrentHandler torrentHandler = new TorrentHandler(client, torrent, localFile.getParentFile());
+				client.addTorrent(torrentHandler);
+				try {
+					client.start();
+				}
+				catch (Exception e) {
+					// TODO is this the correct way to handle this?
+					e.printStackTrace();
+					throw new StorageException(e);
+				}
+
+				CountDownLatch latch = new CountDownLatch(1);
+				client.addClientListener(new ClientCompletionListener(latch, TorrentHandler.State.SEEDING));
+				await(latch, client);
 				Files.copy(localFile.toPath(), Paths.get(btDataDir + File.separator + localFile.getName()), options[0]);
-				// TODO - share this torrent
+				// no need to share here, this is done by the daemon
 			}
 			else if (isDataBaseRemoteFile(remoteFile.getClass())) {
-				// nothing to do
+				// nothing to do here, the file already got downloaded
 			}
 		}
-		catch (IOException ex) {
-			logger.log(Level.SEVERE, "Error while downloading file from WebDAV: " + remoteFile, ex);
+		catch (IOException | URISyntaxException ex) {
+			logger.log(Level.SEVERE, "Error while downloading file: " + remoteFile, ex);
 			throw new StorageException(ex);
+		}
+		catch (InterruptedException e1) {
+			// TODO is this the proper way to handle this?
+			e1.printStackTrace();
+			throw new StorageException(e1);
 		}
 	}
 
@@ -262,6 +289,14 @@ public class BtTransferManager extends AbstractTransferManager {
 			return true;
 		}
 		return false;
+	}
+
+	protected void await(CountDownLatch latch, Client c) throws InterruptedException {
+		for (;;) {
+			if (latch.await(5, TimeUnit.SECONDS))
+				break;
+			c.info(true);
+		}
 	}
 
 	@Override
@@ -278,17 +313,29 @@ public class BtTransferManager extends AbstractTransferManager {
 		if (isMultiChunkFile(localFile)) {
 
 			CopyOption[] options = new CopyOption[] { StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES };
-			TorrentCreator torrentCreator = new TorrentCreator();
-
 			String torrentFile = new String(btTorrentDir + File.separator + localFile.getName() + ".torrent");
+			ArrayList<File> file = new ArrayList<File>();
+			file.add(new File(btDataDir + File.separator + localFile.getName()));
+			TorrentCreator creator = new TorrentCreator(new File(btDataDir));
+			creator.setFiles(file);
+
 			try {
 				Files.copy(localFile.toPath(), Paths.get(btDataDir + File.separator + localFile.getName()), options[0]);
-				files.add(new File(btDataDir + File.separator + localFile.getName()));
-				String infohash = new String(torrentCreator.create(torrentFile, announceUrl,
-						new File(btDataDir + File.separator + localFile.getName())));
-				logger.info("created torrent " + torrentFile + " having infohash " + infohash);
+				creator.setAnnounce(new URI(announceUrl));
+				Torrent torrent = creator.create();
+
+				OutputStream fos = FileUtils.openOutputStream(new File(torrentFile));
+				try {
+					torrent.save(fos);
+				}
+
+				finally {
+					IOUtils.closeQuietly(fos);
+				}
 			}
-			catch (Exception e) {
+			catch (IOException | URISyntaxException | InterruptedException e) {
+				logger.severe("torrent file could not be written");
+				e.printStackTrace();
 				throw new StorageException(e);
 			}
 			uploadFile = new File(torrentFile);

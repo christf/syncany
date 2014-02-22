@@ -28,24 +28,20 @@ import java.nio.channels.SocketChannel;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Enumeration;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
-import javax.xml.parsers.ParserConfigurationException;
-
-import org.xml.sax.SAXException;
-
 import com.turn.ttorrent.client.Client;
+import com.turn.ttorrent.client.TorrentHandler;
 import com.turn.ttorrent.common.Torrent;
 
 /**
  * @author christof
  *
  */
-public class TestSeeding {
-	private static final Logger logger = Logger.getLogger(TestSeeding.class.getSimpleName());
+public class SeedingDaemon {
+	private static final Logger logger = Logger.getLogger(SeedingDaemon.class.getSimpleName());
 
 	// TODO [feature] Allow to configure the interface using the configuration of syncany
 	private static InetAddress obtainInetAddress() throws SocketException {
@@ -102,21 +98,39 @@ public class TestSeeding {
 				return address;
 			}
 		}
-		logger.severe("could not find a suitable network interface to use");
+		interfaces = NetworkInterface.getNetworkInterfaces();
+		logger.severe("could not find a suitable network interface to use, assuming test and returning local address");
+		for (NetworkInterface interface_ : Collections.list(interfaces)) {
+			logger.info("probing interface: " + interface_);
+			if (interface_.isLoopback()) {
+				Enumeration<InetAddress> addresses = interface_.getInetAddresses();
+				for (InetAddress address : Collections.list(addresses)) {
+					if (address instanceof Inet6Address) {
+						continue;
+					}
+					try {
+						if (!address.isReachable(3000))
+							continue;
+					}
+					catch (IOException e) {
+						continue;
+					}
+					return address;
+				}
+			}
+		}
 		return null;
 	}
 
 	// return idle time in millis
-	private static long calcStatusTime(QueueingClient client) {
-		long milliClientLastChange = client.getLastChange().getTime();
-		long millicurrentTime = new Date().getTime();
-		return millicurrentTime - milliClientLastChange;
-	}
+	// private static long calcStatusTime(Client client) {
+	// long milliClientLastChange = client.getLastChange().getTime();
+	// long millicurrentTime = new Date().getTime();
+	// return millicurrentTime - milliClientLastChange;
+	// }
 
-	public static void main(String[] args) throws IOException, InterruptedException, SAXException, ParserConfigurationException {
-		final int maxseeding = 10;
-		int port = 43534;
-		int currentlyseeding = 0;
+	public static void main(String[] args) throws Exception {
+		int port = 43534; // TODO [med] make the port configurable
 
 		Port seedingPort = new Port();
 		try {
@@ -124,37 +138,37 @@ public class TestSeeding {
 			seedingPort.map(port, Port.Protocol.TCP);
 		}
 		catch (Exception e) {
-			logger.warning("could not map port " + port + " via upnp.");
+			logger.warning("could not map port " + port + " via upnp. Seeding may not work.");
 		}
 
 		InetAddress address = obtainInetAddress();
+		System.out.println("Adresse: " + address);
 		logger.info("passing the following address to connectionhandler: " + address);
 
-		ArrayList<QueueingClient> clients = new ArrayList<QueueingClient>();
-
-		File torrentdir = new File("/home/pi/torrent/torrents");
+		File torrentdir = new File("/home/pi/torrent/torrents"); // TODO [high] make torrentdir configurable
 
 		ArrayList<String> torrentFiles = new ArrayList<String>();
 		File destination = new File("/home/pi/torrent/seeddata");
 		destination.mkdirs();
 
-		Client c = new Client(null);
-		// TODO [major] map the port via upnp
-		// TODO [med] get rid of polling the torrents-dir and have "sy down" notify the seeder-process
+		Client client = new Client(new InetSocketAddress(obtainInetAddress(), port));
+		// TODO [low] get rid of polling the torrents-dir and have "sy down" notify the seeder-process
 		try {
-			c.start();
+			client.start();
 
 			while (true) {
 				for (File ftorrent : torrentdir.listFiles()) {
+					logger.info("found file while scanning dir " + ftorrent.getName());
 					if (!torrentFiles.contains(ftorrent.getName())) {
 						// found a new torrent, seed it iff it has finished downloading.
+						logger.info("found a new torrent. " + ftorrent.getName());
 						String tDataFileName = new String(destination.getAbsolutePath() + File.separatorChar + ftorrent.getName());
 						File cdatafile = new File(tDataFileName.substring(0, tDataFileName.length() - 8));
 						if (cdatafile.isFile()) {
 							torrentFiles.add(ftorrent.getName());
 							Torrent torrent = new Torrent(ftorrent);
-							TorrentHandler torrentHandler = new TorrentHandler(c, torrent, destination);
-							c.addTorrent(torrentHandler);
+							TorrentHandler torrentHandler = new TorrentHandler(client, torrent, destination);
+							client.addTorrent(torrentHandler);
 						}
 					}
 				}
@@ -167,7 +181,7 @@ public class TestSeeding {
 			System.exit(2);
 		}
 		finally {
-			c.stop();
+			client.stop();
 		}
 
 		// int t = 0;
