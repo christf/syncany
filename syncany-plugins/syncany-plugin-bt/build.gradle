@@ -5,12 +5,15 @@ dependencies {
 
     testCompile     "junit:junit:4.3"
     testCompile     project(path : ':syncany-lib', configuration: 'tests')
-    
+   
+    runtime 'com.yammer.metrics:metrics-core:2.2.0'
+    runtime 'org.apache.httpcomponents:httpasyncclient:4.0'
+    runtime 'io.netty:netty-all:4.0.14.Final'
     runtime 'org.slf4j:slf4j-jdk14:1.7.5'
 }
 
 task(runTS, dependsOn: "classes", type: JavaExec) {
-         main = "org.syncany.connection.plugins.bt.TestSeeding"
+         main = "org.syncany.connection.plugins.bt.SeedingDaemon"
          classpath = sourceSets.main.runtimeClasspath
 }
 task(runTL, dependsOn: "classes", type: JavaExec) {
