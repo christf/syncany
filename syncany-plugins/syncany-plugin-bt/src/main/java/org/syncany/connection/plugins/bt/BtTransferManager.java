@@ -23,22 +23,16 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.channels.SocketChannel;
-import java.nio.channels.UnresolvedAddressException;
 import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +61,7 @@ import com.turn.ttorrent.common.Torrent;
 import com.turn.ttorrent.common.TorrentCreator;
 
 // TODO [medium] use torrent library that supports DHT
+// TODO [feature] Allow to configure the interface using the configuration of syncany
 
 public class BtTransferManager extends AbstractTransferManager {
 	private static final String APPLICATION_CONTENT_TYPE = "application/x-syncany";
@@ -103,65 +98,6 @@ public class BtTransferManager extends AbstractTransferManager {
 		return (BtConnection) super.getConnection();
 	}
 
-	// TODO [feature] Allow to configure the interface using the configuration of syncany
-	private InetAddress obtainInetAddress() throws SocketException {
-		Enumeration<NetworkInterface> interfaces;
-
-		interfaces = NetworkInterface.getNetworkInterfaces();
-
-		for (NetworkInterface interface_ : Collections.list(interfaces)) {
-			if (interface_.isLoopback()) {
-				continue;
-			}
-			if (!interface_.isUp()) {
-				continue;
-			}
-
-			Enumeration<InetAddress> addresses = interface_.getInetAddresses();
-			for (InetAddress address : Collections.list(addresses)) {
-				// look only for ipv4 addresses
-				if (address instanceof Inet6Address) {
-					continue;
-				}
-
-				try {
-					if (!address.isReachable(3000))
-						continue;
-				}
-				catch (IOException e) {
-					continue;
-				}
-
-				try (SocketChannel socket = SocketChannel.open()) {
-					socket.socket().setSoTimeout(3000);
-
-					int startPort = (int) (Math.random() * 64495 + 1024);
-					for (int port = startPort; port < startPort + 15; port++) {
-						try {
-							socket.bind(new InetSocketAddress(address, port));
-							break;
-						}
-						catch (IOException e) {
-							continue;
-						}
-					}
-					socket.connect(new InetSocketAddress("google.com", 80));
-				}
-				catch (IOException | UnresolvedAddressException ex) {
-					// even if there is an exception there might be a different interface which works => continue
-					continue;
-				}
-
-				String logmessage = new String();
-				logmessage = String.format("using interface: %s, ia: %s\n", interface_, address);
-				logger.info(logmessage);
-				return address;
-			}
-		}
-		logger.severe("could not find a suitable network interface to use");
-		return null;
-	}
-
 	@Override
 	public void connect() throws StorageException {
 		File mkDir = new File(this.btCache);
@@ -171,6 +107,8 @@ public class BtTransferManager extends AbstractTransferManager {
 		mkDir = new File(this.btTorrentDir);
 		mkDir.mkdir();
 		mkDir = null;
+
+		NetworkHelper netHelper = new NetworkHelper();
 
 		if (sardine == null) {
 			if (getConnection().isSecure()) {
@@ -191,7 +129,7 @@ public class BtTransferManager extends AbstractTransferManager {
 		}
 
 		try {
-			this.inetaddress = obtainInetAddress();
+			this.inetaddress = netHelper.obtainInetAddress();
 		}
 		catch (SocketException e) {
 			throw new StorageException("could not find a suitable IP-Address to bind", e);
@@ -350,7 +288,7 @@ public class BtTransferManager extends AbstractTransferManager {
 		catch (Exception e) {
 			throw new StorageException("could not create torrent for files: " + files + "or could not upload metadata to webdav storage", e);
 		}
-		// TODO add this torrent to seeding queue.
+		// TODO [low] notify the seeding daemon that the directory should be scanned (or that there is a new file for seeding?)
 	}
 
 	@Override

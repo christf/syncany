@@ -18,17 +18,9 @@
 package org.syncany.connection.plugins.bt;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.nio.channels.SocketChannel;
-import java.nio.channels.UnresolvedAddressException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Enumeration;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -42,85 +34,6 @@ import com.turn.ttorrent.common.Torrent;
  */
 public class SeedingDaemon {
 	private static final Logger logger = Logger.getLogger(SeedingDaemon.class.getSimpleName());
-
-	// TODO [feature] Allow to configure the interface using the configuration of syncany
-	private static InetAddress obtainInetAddress() throws SocketException {
-		Enumeration<NetworkInterface> interfaces;
-
-		interfaces = NetworkInterface.getNetworkInterfaces();
-
-		for (NetworkInterface interface_ : Collections.list(interfaces)) {
-			if (interface_.isLoopback()) {
-				continue;
-			}
-			if (!interface_.isUp()) {
-				continue;
-			}
-
-			Enumeration<InetAddress> addresses = interface_.getInetAddresses();
-			for (InetAddress address : Collections.list(addresses)) {
-				// look only for ipv4 addresses
-				if (address instanceof Inet6Address) {
-					continue;
-				}
-
-				try {
-					if (!address.isReachable(3000))
-						continue;
-				}
-				catch (IOException e) {
-					continue;
-				}
-
-				try (SocketChannel socket = SocketChannel.open()) {
-					socket.socket().setSoTimeout(3000);
-
-					int startPort = (int) (Math.random() * 64495 + 1024);
-					for (int port = startPort; port < startPort + 15; port++) {
-						try {
-							socket.bind(new InetSocketAddress(address, port));
-							break;
-						}
-						catch (IOException e) {
-							continue;
-						}
-					}
-					socket.connect(new InetSocketAddress("google.com", 80));
-				}
-				catch (IOException | UnresolvedAddressException ex) {
-					// even if there is an exception there might be a different interface which works => continue
-					continue;
-				}
-
-				String logmessage = new String();
-				logmessage = String.format("using interface: %s, ia: %s\n", interface_, address);
-				logger.info(logmessage);
-				return address;
-			}
-		}
-		interfaces = NetworkInterface.getNetworkInterfaces();
-		logger.severe("could not find a suitable network interface to use, assuming test and returning local address");
-		for (NetworkInterface interface_ : Collections.list(interfaces)) {
-			logger.info("probing interface: " + interface_);
-			if (interface_.isLoopback()) {
-				Enumeration<InetAddress> addresses = interface_.getInetAddresses();
-				for (InetAddress address : Collections.list(addresses)) {
-					if (address instanceof Inet6Address) {
-						continue;
-					}
-					try {
-						if (!address.isReachable(3000))
-							continue;
-					}
-					catch (IOException e) {
-						continue;
-					}
-					return address;
-				}
-			}
-		}
-		return null;
-	}
 
 	// return idle time in millis
 	// private static long calcStatusTime(Client client) {
@@ -140,10 +53,9 @@ public class SeedingDaemon {
 		catch (Exception e) {
 			logger.warning("could not map port " + port + " via upnp. Seeding may not work.");
 		}
-
-		InetAddress address = obtainInetAddress();
-		System.out.println("Adresse: " + address);
-		logger.info("passing the following address to connectionhandler: " + address);
+		NetworkHelper netHelper = new NetworkHelper();
+		InetAddress address = netHelper.obtainInetAddress();
+		logger.info("passing the following address to ttorrent: " + address);
 
 		File torrentdir = new File("/home/pi/torrent/torrents"); // TODO [high] make torrentdir configurable
 
@@ -151,7 +63,7 @@ public class SeedingDaemon {
 		File destination = new File("/home/pi/torrent/seeddata");
 		destination.mkdirs();
 
-		Client client = new Client(new InetSocketAddress(obtainInetAddress(), port));
+		Client client = new Client(new InetSocketAddress(address, port));
 		// TODO [low] get rid of polling the torrents-dir and have "sy down" notify the seeder-process
 		try {
 			client.start();
