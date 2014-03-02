@@ -30,7 +30,7 @@ import java.util.Enumeration;
 import java.util.logging.Logger;
 
 /**
- * @author christof
+ * @author Christof Schulze <christof.schulze@gmx.net>
  *
  */
 public class NetworkHelper {

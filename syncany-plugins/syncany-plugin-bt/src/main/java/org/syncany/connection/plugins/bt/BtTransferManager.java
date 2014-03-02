@@ -67,7 +67,7 @@ public class BtTransferManager extends AbstractTransferManager {
 	private static final String APPLICATION_CONTENT_TYPE = "application/x-syncany";
 	private static final Logger logger = Logger.getLogger(BtTransferManager.class.getSimpleName());
 
-	private static final String announceUrl = "http://kdserv.dyndns.org:6969/announce";
+	private static final String announceUrl = "http://localhost:6969/announce";
 	private int port;
 	private Sardine sardine;
 
@@ -135,6 +135,14 @@ public class BtTransferManager extends AbstractTransferManager {
 			throw new StorageException("could not find a suitable IP-Address to bind", e);
 		}
 
+		// create remote base path if it does not exist
+		try {
+			sardine.createDirectory(getConnection().getUrl());
+		}
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		// TODO [high] initialize the seeding queue and start at least some clients.
 	}
 
@@ -144,27 +152,10 @@ public class BtTransferManager extends AbstractTransferManager {
 		inetaddress = null;
 	}
 
-	@Override
-	public void init() throws StorageException {
-		connect();
+	// @Override
+	// public void init() throws StorageException {
 
-		try {
-			// use the multichunkPath to store the torrent files for each DB-state
-			sardine.createDirectory(multichunkPath);
-			sardine.createDirectory(databasePath);
-		}
-		catch (Exception e) {
-			logger.log(Level.SEVERE, "Cannot initialize WebDAV folder.", e);
-			throw new StorageException(e);
-		}
-		File mkDir = new File(this.btCache);
-		mkDir.mkdir();
-		mkDir = new File(this.btDataDir);
-		mkDir.mkdir();
-		mkDir = new File(this.btTorrentDir);
-		mkDir.mkdir();
-		mkDir = null;
-	}
+	// }
 
 	@Override
 	public void download(RemoteFile remoteFile, File localFile) throws StorageException {
@@ -374,5 +365,48 @@ public class BtTransferManager extends AbstractTransferManager {
 		else {
 			return repoPath;
 		}
+	}
+
+	@Override
+	public void init(boolean createIfRequired) throws StorageException {
+		connect();
+
+		try {
+			if (createIfRequired) {
+				sardine.createDirectory(repoPath);
+			}
+			// use the multichunkPath to store the torrent files for each DB-state
+			sardine.createDirectory(multichunkPath);
+			sardine.createDirectory(databasePath);
+		}
+		catch (Exception e) {
+			logger.log(Level.SEVERE, "Cannot initialize WebDAV folder.", e);
+			throw new StorageException(e);
+		}
+		File mkDir = new File(this.btCache);
+		mkDir.mkdir();
+		mkDir = new File(this.btDataDir);
+		mkDir.mkdir();
+		mkDir = new File(this.btTorrentDir);
+		mkDir.mkdir();
+		mkDir = null;
+	}
+
+	@Override
+	public boolean hasWriteAccess() throws StorageException {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean repoExists() throws StorageException {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean repoIsEmpty() throws StorageException {
+		// TODO Auto-generated method stub
+		return false;
 	}
 }

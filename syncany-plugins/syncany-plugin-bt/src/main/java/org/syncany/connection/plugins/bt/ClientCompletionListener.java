@@ -27,7 +27,7 @@ import com.turn.ttorrent.client.ClientListenerAdapter;
 import com.turn.ttorrent.client.TorrentHandler;
 
 /**
- * @author christof
+ * @author Christof Schulze <christof.schulze@gmx.net>
  * this was yanked from ReplicationCompletionListener by shevek
  */
 

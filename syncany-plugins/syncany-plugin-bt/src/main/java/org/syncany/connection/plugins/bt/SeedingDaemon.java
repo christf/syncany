@@ -29,7 +29,7 @@ import com.turn.ttorrent.client.TorrentHandler;
 import com.turn.ttorrent.common.Torrent;
 
 /**
- * @author christof
+ * @author Christof Schulze <christof.schulze@gmx.net>
  *
  */
 public class SeedingDaemon {

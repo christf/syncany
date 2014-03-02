@@ -30,7 +30,7 @@ import org.bitlet.weupnp.PortMappingEntry;
 import org.xml.sax.SAXException;
 
 /**
- * @author christof
+ * @author Christof Schulze <christof.schulze@gmx.net>
  *
  */
 
