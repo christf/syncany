@@ -5,7 +5,10 @@ dependencies {
 
     testCompile     "junit:junit:4.3"
     testCompile     project(path : ':syncany-lib', configuration: 'tests')
-   
+  
+// needed for test - testruntime is deprecated in gradle 2 so not using it here
+    testRuntime 'org.simpleframework:simple:4.1.21'
+
     runtime 'com.yammer.metrics:metrics-core:2.2.0'
     runtime 'org.apache.httpcomponents:httpasyncclient:4.0'
     runtime 'io.netty:netty-all:4.0.14.Final'
